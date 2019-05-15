@@ -8,7 +8,7 @@
 using namespace std;
 using namespace Eigen;
 
-const int Nx = 6, Ny = 5;
+const int Nx = 51, Ny = 41;
 const double Lx = 0.1, Ly = 0.08; // m
 const double xL = -Lx / 2, xR = Lx / 2;
 const double yL = -Ly / 2, yR = Ly / 2;
@@ -63,8 +63,9 @@ void initialize_flowfield(void)
 	cout << "u0 = " << u0 << endl;
 	cout << "mu = " << mu << endl;
 
-	for (int i = 0; i < Nx - 1; ++i)
-		u[i][Ny - 1] = u0;
+	for(auto j = 1; j < Ny; ++j)
+	    for (auto i = 0; i < Nx - 1; ++i)
+		    u[i][j] = u0;
 }
 
 void output(const string &fn, const vector<vector<double>> &u, const vector<vector<double>> &v, const vector<vector<double>> &p)
@@ -82,17 +83,21 @@ void output(const string &fn, const vector<vector<double>> &u, const vector<vect
 			flow << setw(16) << scientific << setprecision(6) << y[j];
 			flow << setw(16) << scientific << setprecision(6) << rho;
 
-			if (i == 0 || i == Nx - 1)
-			{
-				if (j == Ny-1)
-					flow << setw(16) << scientific << setprecision(6) << u0;
-				else
-					flow << setw(16) << scientific << setprecision(6) << 0.0; // u at 2 vertical boundary is 0
-			}
-			else
-				flow << setw(16) << scientific << setprecision(6) << relaxation(u[i - 1][j], u[i][j], 0.5);
+			// u
+            if (j == Ny-1)
+                flow << setw(16) << scientific << setprecision(6) << u0; // B.C.
+            else if(j == 0)
+                flow << setw(16) << scientific << setprecision(6) << 0.0; // B.C.
+            else
+            {
+                if (i == 0 || i == Nx - 1)
+                    flow << setw(16) << scientific << setprecision(6) << 0.0; // B.C.
+                else
+                    flow << setw(16) << scientific << setprecision(6) << relaxation(u[i - 1][j], u[i][j], 0.5);
+            }
 
-			if (j == 0 || j == Ny - 1)
+			// v
+			if (i == 0 || i == Nx - 1 || j == 0 || j == Ny - 1)
 				flow << setw(16) << scientific << setprecision(6) << 0.0; // v at 2 horizontal boundary is 0
 			else
 				flow << setw(16) << scientific << setprecision(6) << relaxation(v[i][j - 1], v[i][j], 0.5);
