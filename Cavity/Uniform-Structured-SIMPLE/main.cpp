@@ -8,20 +8,18 @@
 using namespace std;
 using namespace Eigen;
 
-typedef SparseMatrix<double> SpMat;
-
 const int Nx = 6, Ny = 5;
-const double Lx = 1e-0, Ly = 8e-1; // m
+const double Lx = 0.1, Ly = 0.08; // m
 const double xL = -Lx / 2, xR = Lx / 2;
 const double yL = -Ly / 2, yR = Ly / 2;
 const double dx = Lx / (Nx - 1), dy = Ly / (Ny - 1);
 const double dx2 = pow(dx, 2), dy2 = pow(dy, 2);
 
-const double rho = 0.996873e3; // kg/m^3
-const double g = 9.80665; // m/s^2
+const double Re = 200.0;
+const double rho = 1.0; // kg/m^3
 const double p0 = 101325.0; // Pa
-const double u0 = 1.0; // m/s
-const double mu = 8.949e-4; // Pa*s
+const double u0 = 0.1; // m/s
+const double mu = rho * u0 * max(Lx, Ly) / Re; // Pa*s
 
 const double alpha_p = 0.8;
 
@@ -60,11 +58,10 @@ void setup_grid(void)
 
 void initialize_flowfield(void)
 {
-	const double dp = rho * g * dy;
-
-	for (int j = Ny - 2; j >= 0; --j)
-		for (int i = 0; i < Nx; ++i)
-			p[i][j] = p[i][j + 1] + dp;
+	cout << "Re = " << Re << endl;
+	cout << "rho = " << rho << endl;
+	cout << "u0 = " << u0 << endl;
+	cout << "mu = " << mu << endl;
 
 	for (int i = 0; i < Nx - 1; ++i)
 		u[i][Ny - 1] = u0;
@@ -85,17 +82,18 @@ void output(const string &fn, const vector<vector<double>> &u, const vector<vect
 			flow << setw(16) << scientific << setprecision(6) << y[j];
 			flow << setw(16) << scientific << setprecision(6) << rho;
 
-			if (i == 0)
-				flow << setw(16) << scientific << setprecision(6) << u[i][j];
-			else if (i == Nx - 1)
-				flow << setw(16) << scientific << setprecision(6) << u[i - 1][j];
+			if (i == 0 || i == Nx - 1)
+			{
+				if (j == Ny-1)
+					flow << setw(16) << scientific << setprecision(6) << u0;
+				else
+					flow << setw(16) << scientific << setprecision(6) << 0.0; // u at 2 vertical boundary is 0
+			}
 			else
 				flow << setw(16) << scientific << setprecision(6) << relaxation(u[i - 1][j], u[i][j], 0.5);
 
-			if (j == 0)
-				flow << setw(16) << scientific << setprecision(6) << v[i][j];
-			else if (j == Ny - 1)
-				flow << setw(16) << scientific << setprecision(6) << v[i][j - 1];
+			if (j == 0 || j == Ny - 1)
+				flow << setw(16) << scientific << setprecision(6) << 0.0; // v at 2 horizontal boundary is 0
 			else
 				flow << setw(16) << scientific << setprecision(6) << relaxation(v[i][j - 1], v[i][j], 0.5);
 
@@ -112,6 +110,8 @@ void solve(void)
 	int iter = 0;
 	while (!ok)
 	{
+		output("Cavity.dat", u, v, p);
+
 		cout << "Iter " << ++iter << ":" << endl;
 		cout << "\tInit star value from previous calculation..." << endl;
 		for (int i = 0; i < Nx; ++i)
@@ -125,8 +125,6 @@ void solve(void)
 		for (int i = 0; i < Nx; ++i)
 			for (int j = 0; j < Ny - 1; ++j)
 				v_star[i][j] = v[i][j];
-
-		output("Cavity.dat", u, v, p);
 
 		cout << "\tCalculate new star value..." << endl;
 		double v_a, v_b, dru2dx, druvdy, dduddx, dduddy, A_star, dpdx;
@@ -190,7 +188,7 @@ void solve(void)
 		cout << "\tSolve the Possion equation..." << endl;
 		const int NumOfUnknown = (Nx - 2) * (Ny - 2);
 
-		SpMat A(NumOfUnknown, NumOfUnknown);
+		SparseMatrix<double> A(NumOfUnknown, NumOfUnknown);
 		A.setZero();
 		VectorXd b(NumOfUnknown);
 		b.setZero();
@@ -250,7 +248,7 @@ void solve(void)
 		A.setFromTriplets(elem.begin(), elem.end());
 
 		// Take Cholesky decomposition of A
-		SimplicialCholesky<SpMat> chol(A);
+		SimplicialCholesky<SparseMatrix<double>> chol(A);
 		// Solve
 		VectorXd x = chol.solve(b);
 
