@@ -8,7 +8,7 @@
 using namespace std;
 using namespace Eigen;
 
-const int Nx = 51, Ny = 41;
+const int Nx = 6, Ny = 5;
 const double Lx = 0.1, Ly = 0.08; // m
 const double xL = -Lx / 2, xR = Lx / 2;
 const double yL = -Ly / 2, yR = Ly / 2;
@@ -109,14 +109,60 @@ void output(const string &fn, const vector<vector<double>> &u, const vector<vect
 	flow.close();
 }
 
+static void l2g(int loc_i, int loc_j, int &glb_i, int &glb_j)
+{
+	glb_i = loc_i + 1;
+	glb_j = loc_j + 1;
+}
+
+static void g2l(int glb_i, int glb_j, int &loc_i, int &loc_j)
+{
+	loc_i = glb_i - 1;
+	loc_j = glb_j - 1;
+}
+
+static int loc_idx(int loc_i, int loc_j)
+{
+	return loc_j * (Nx - 2) + loc_i;
+}
+
+static bool onBdy(int glb_i, int glb_j)
+{
+	return glb_i == 0 || glb_i == Nx - 1 || glb_j == 0 || glb_j == Ny - 1;
+}
+
+static void idx_around(int glb_i, int glb_j, int *ax, int *ay, int *ai, bool *bdyFlag)
+{
+	ax[0] = glb_i;
+	ay[0] = glb_j;
+
+	ax[1] = glb_i + 1;
+	ay[1] = glb_j;
+
+	ax[2] = glb_i;
+	ay[2] = glb_j + 1;
+
+	ax[3] = glb_i - 1;
+	ay[3] = glb_j;
+
+	ax[4] = glb_i;
+	ay[4] = glb_j - 1;
+
+	for (auto i = 0; i < 5; ++i)
+	{
+		int loc_i, loc_j;
+		g2l(ax[i], ay[i], loc_i, loc_j);
+		ai[i] = loc_idx(loc_i, loc_j);
+		bdyFlag[i] = onBdy(ax[i], ay[i]);
+	}
+}
+
 void solve(void)
 {
 	bool ok = false;
 	int iter = 0;
 	while (!ok)
 	{
-		output("Cavity.dat", u, v, p);
-
 		cout << "Iter " << ++iter << ":" << endl;
 		cout << "\tInit star value from previous calculation..." << endl;
 		for (int i = 0; i < Nx; ++i)
@@ -188,76 +234,70 @@ void solve(void)
 				v_star[i][j] += dt * (B_star - dpdy) / rho;
 			}
 
-		output("Cavity_star.dat", u_star, v_star, p_star);
-
 		cout << "\tSolve the Possion equation..." << endl;
 		const int NumOfUnknown = (Nx - 2) * (Ny - 2);
+		
+		// Compute d
+		VectorXd b(NumOfUnknown);
+		b.setZero();
+		int cnt = 0;
+		for (int j = 1; j < Ny - 1; ++j)
+			for (int i = 1; i < Nx - 1; ++i)
+			{
+				double drusdx = (rho*u_star[i][j] - rho * u_star[i - 1][j]) / dx;
+				double drvsdy = (rho*v_star[i][j] - rho * v_star[i][j - 1]) / dy;
+				p_prime[i][j] = drusdx + drvsdy;
+				b[cnt++] = -p_prime[i][j];
+			}
+
+		// Compute coefficient matrix
+		vector<Triplet<double>> elem;
+		for (int j = 1; j < Ny - 1; ++j)
+			for (int i = 1; i < Nx - 1; ++i)
+			{
+				int idx[5], ii[5], jj[5];
+				bool flag[5];
+				idx_around(i, j, ii, jj, idx, flag);
+
+				double v[5] = { coef_a, 0.0, 0.0, 0.0, 0.0 };
+
+				// E
+				if (flag[1])
+					v[0] += coef_b;
+				else
+					v[1] += coef_b;
+
+				// N
+				if (!flag[2])
+					v[2] += coef_c;
+
+				// W
+				if (flag[3])
+					v[0] += coef_b;
+				else
+					v[3] += coef_b;
+
+				// S
+				if (flag[4])
+					v[0] += coef_c;
+				else
+					v[4] += coef_c;
+
+				for(auto c = 0; c < 5; ++c)
+					if(!flag[c])
+						elem.push_back(Triplet<double>(idx[c], idx[c], v[c]));
+			}
 
 		SparseMatrix<double> A(NumOfUnknown, NumOfUnknown);
 		A.setZero();
-		VectorXd b(NumOfUnknown);
-		b.setZero();
-		vector<Triplet<double>> elem;
-
-		for (int i = 1; i < Nx - 1; ++i)
-			for (int j = 1; j < Ny - 1; ++j)
-			{
-				const int idx0 = (j - 1)*(Nx - 2) + (i - 1);
-				const int idx1 = (j - 1)*(Nx - 2) + i;
-				const int idx2 = j * (Nx - 2) + (i - 1);
-				const int idx3 = (j - 1)*(Nx - 2) + (i - 2);
-				const int idx4 = (j - 2)*(Nx - 2) + (i - 1);
-
-				double v0 = 0.0;
-				double v1 = 0.0;
-				double v2 = 0.0;
-				double v3 = 0.0;
-				double v4 = 0.0;
-
-				v0 += coef_a;
-				if (i == Nx - 2)
-					v0 += coef_b;
-				else
-					v1 += coef_b;
-
-				if (j == Ny - 2)
-					b[idx0] -= coef_c * 0.0;
-				else
-					v2 += coef_c;
-
-				if (i == 1)
-					v0 += coef_b;
-				else
-					v3 += coef_b;
-
-				if (j == 1)
-					v0 += coef_c;
-				else
-					v4 += coef_c;
-
-				double drusdx = (rho*u_star[i][j] - rho * u_star[i - 1][j]) / dx;
-				double drvsdy = (rho*v_star[i][j] - rho * v_star[i][j - 1]) / dy;
-				b[idx0] -= (drusdx + drvsdy);
-
-				elem.push_back(Triplet<double>(idx0, idx0, v0));
-				if (v1 != 0.0)
-					elem.push_back(Triplet<double>(idx0, idx1, v1));
-				if (v2 != 0.0)
-					elem.push_back(Triplet<double>(idx0, idx2, v2));
-				if (v3 != 0.0)
-					elem.push_back(Triplet<double>(idx0, idx3, v3));
-				if (v4 != 0.0)
-					elem.push_back(Triplet<double>(idx0, idx4, v4));
-			}
-
 		A.setFromTriplets(elem.begin(), elem.end());
 
 		// Take Cholesky decomposition of A
 		SimplicialCholesky<SparseMatrix<double>> chol(A);
+
 		// Solve
 		VectorXd x = chol.solve(b);
 
-		/*
 		ofstream fout("A.txt");
 		fout << A;
 		fout.close();
@@ -267,9 +307,8 @@ void solve(void)
 		fout.open("x.txt");
 		fout << x;
 		fout.close();
-		*/
 
-		int cnt = 0;
+		cnt = 0;
 		for (int i = 1; i < Nx - 1; ++i)
 			for (int j = 1; j < Ny - 1; ++j)
 				p_prime[i][j] = x[cnt++];
