@@ -179,13 +179,13 @@ void output()
     ss << "iter" << iter_cnt << "_t=" << t << ".dat";
     ofstream fout(ss.str());
 	fout << "Variables = ";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "x/L";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "A/A_star";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "rho/rho0";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "V/a0";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "T/T0";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "p/p0";
-    fout << setw(WIDTH) << setprecision(DIGITS) << "Ma" << endl;
+    fout << "x/L";
+    fout << setw(WIDTH) << "A/A_star";
+    fout << setw(WIDTH) << "rho/rho0";
+    fout << setw(WIDTH) << "V/a0";
+    fout << setw(WIDTH) << "T/T0";
+    fout << setw(WIDTH) << "p/p0";
+    fout << setw(WIDTH) << "Ma" << endl;
 	fout << "Zone I=" << N << ", F = point" << endl;
     for(int i = 0; i < N; ++i)
     {
