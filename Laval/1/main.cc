@@ -11,8 +11,8 @@ using namespace std;
 
 const size_t WIDTH = 16;
 const size_t DIGITS = 6;
-const size_t OUTPUT_GAP = 50;
-const size_t MAX_STEP = 2000;
+const size_t OUTPUT_GAP = 100;
+const size_t MAX_STEP = 5000;
 
 const double G0 = 1.4;
 const double G1 = 1 / G0;
@@ -22,17 +22,15 @@ const double W_air = 28.9; // Kg/Kmol
 const double Rw = R / W_air;
 
 const double P0 = 10 * 101325.0; // Pa
-const double Pe = 0.93 * P0;
+const double Pe = 0.9 * P0; // Pa
 const double T0 = 300.0; // K
 const double rho0 = P0 / (R*T0);
 const double a0 = sqrt(G0 * Rw * T0);
-const double A_star = 1.0;
+const double A_t = 1.0;
 
 const double CFL = 0.5;
 size_t iter_cnt = 0;
 double t = 0.0;
-
-ofstream single_result;
 
 const int N = 31;
 const double dx = 0.1;
@@ -43,20 +41,6 @@ vector<double> drhodt(N, 0.0), dVdt(N, 0.0), dTdt(N, 0.0);
 vector<double> drhodt_bar(N, 0.0), dVdt_bar(N, 0.0), dTdt_bar(N, 0.0);
 vector<double> drhodt_av(N, 0.0), dVdt_av(N, 0.0), dTdt_av(N, 0.0);
 
-void write_result()
-{
-    single_result << iter_cnt << '\t' << t << endl;
-    for(int i = 0; i < N; ++i)
-    {
-        single_result << setw(WIDTH) << setprecision(DIGITS) << rho[i];
-        single_result << setw(WIDTH) << setprecision(DIGITS) << V[i];
-        single_result << setw(WIDTH) << setprecision(DIGITS) << T[i];
-        single_result << setw(WIDTH) << setprecision(DIGITS) << P[i];
-        single_result << setw(WIDTH) << setprecision(DIGITS) << Ma[i];
-        single_result << setw(WIDTH) << setprecision(DIGITS) << mdot[i] << endl;
-    }
-}
-
 void init()
 {
     // Grid
@@ -65,34 +49,22 @@ void init()
 
     // Cross-section area
     for(int i = 0; i < N; ++i)
-        A[i] = A_star + 2.2*pow(x[i]-1.5, 2);
-
+    {
+        if(x[i] <= 1.5)
+            A[i] = A_t + 2.2*pow(x[i]-1.5, 2);
+        else
+            A[i] = A_t + 0.2223*pow(x[i]-1.5, 2);
+    }
     // I.C.
     for(int i = 0; i < N; ++i)
     {
-        rho[i] = 1.0 - 0.3146 * x[i];
-        T[i] = 1.0 - 0.2314 * x[i];
-        V[i] = (0.1 + 1.09*x[i]) * sqrt(T[i]);
+        rho[i] = 1.0 - 0.023 * x[i];
+        T[i] = 1.0 - 0.009333 * x[i];
+        V[i] = 0.05 + 0.11*x[i];
         P[i] = rho[i] * T[i];
         Ma[i] = V[i] / sqrt(T[i]);
         mdot[i] = rho[i] * V[i] * A[i];
     }
-    
-    // Output
-    single_result.open("flow.txt");
-    single_result << N << endl;
-    for(int i = 0; i < N; ++i)
-        single_result << x[i] << '\t';
-    single_result << endl;
-    for(int i = 0; i < N; ++i)
-        single_result << A[i] << '\t';
-    single_result << endl;
-    write_result();
-}
-
-void finalize()
-{
-    single_result.close();
 }
 
 void loop()
@@ -161,27 +133,33 @@ void loop()
     }
 
     // B.C. at inlet
-    // Subsonic inlet, one determined from interior
-    // Eigenvalue: u-a < 0, u > 0, u+a > 0
+    // Subsonic inlet, with eigenvalue: u-a < 0, u > 0, u+a > 0
+    // Let V determined from interior, rho and T fixed
     rho[0] = 1.0;
     V[0] = 2 * V[1] - V[2]; 
     T[0] = 1.0;
+    P[0] = 1.0;
 
     // B.C. at outlet
-    // Supersonic outlet, all determined from interior
-    // Eigenvalue: u-a > 0, u > 0, u+a > 0
+    // Subsonic outlet, with eigenvalue: u-a < 0, u > 0, u+a > 0
+    // Let P fixed, rho, V, T determined from interior
     rho[N-1] = 2 * rho[N-2] - rho[N-3];
     V[N-1] = 2 * V[N-2] - V[N-3];
-    T[N-1] = 2 * T[N-2] - T[N-3];
+    P[N-1] = Pe / P0;
+    T[N-1] = P[N-1] / rho[N-1];
 
     // Mach Number
     for(int i = 0; i < N; ++i)
-    {
         Ma[i] = V[i] / sqrt(T[i]);
+
+    // Pressure
+    for(int i = 1; i < N-1; ++i)
         P[i] = rho[i] * T[i];
+
+    // Mass flux
+    for(int i = 0; i < N; ++i)
         mdot[i] = rho[i] * V[i] * A[i];
-    }
-	
+
 	t += dt;
 }
 
@@ -194,11 +172,7 @@ bool check_convergence()
 {
     double rms = 0.0;
     for(int i = 1; i < N-1; ++i)
-    {
-        double mdot_L = rho[i-1] * V[i-1] * A[i-1];
-        double mdot_R = rho[i+1] * V[i+1] * A[i+1];
-        rms += pow(fder1(mdot_L, mdot_R), 2);
-    }
+        rms += pow(fder1(mdot[i-1], mdot[i+1]), 2);
     rms = sqrt(rms / (N-1));
 
     cout << "\tRMS=" << rms << endl;
@@ -206,7 +180,7 @@ bool check_convergence()
     return rms < 1e-3 || iter_cnt > MAX_STEP;
 }
 
-void output_tecplot()
+void output()
 {
     if(iter_cnt % OUTPUT_GAP != 0)
         return;
@@ -216,12 +190,13 @@ void output_tecplot()
     ofstream fout(ss.str());
 	fout << "Variables = ";
     fout << "x/L";
-    fout << setw(WIDTH) << "A/A_star";
+    fout << setw(WIDTH) << "A/A_t";
     fout << setw(WIDTH) << "rho/rho0";
     fout << setw(WIDTH) << "V/a0";
     fout << setw(WIDTH) << "T/T0";
     fout << setw(WIDTH) << "p/p0";
-    fout << setw(WIDTH) << "Ma" << endl;
+    fout << setw(WIDTH) << "Ma";
+    fout << setw(WIDTH) << "mdot" << endl;
 	fout << "Zone I=" << N << ", F = point" << endl;
     for(int i = 0; i < N; ++i)
     {
@@ -231,7 +206,8 @@ void output_tecplot()
         fout << setw(WIDTH) << setprecision(DIGITS) << V[i];
         fout << setw(WIDTH) << setprecision(DIGITS) << T[i];
         fout << setw(WIDTH) << setprecision(DIGITS) << P[i];
-        fout << setw(WIDTH) << setprecision(DIGITS) << Ma[i] << endl;
+        fout << setw(WIDTH) << setprecision(DIGITS) << Ma[i];
+        fout << setw(WIDTH) << setprecision(DIGITS) << mdot[i] << endl;
     }
 
     fout.close();
@@ -242,10 +218,9 @@ void solve()
     bool ok = false;
     while(!ok)
     {
-        //output_tecplot();
         cout << "Iter" << ++iter_cnt << ":\n";
         loop();
-        write_result();
+        output();
         ok = check_convergence();
     }
 }
@@ -253,7 +228,7 @@ void solve()
 int main(int argc, char *argv[])
 {
     init();
+    output();
     solve();
-    finalize();
     return 0;
 }
