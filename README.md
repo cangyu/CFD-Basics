@@ -5,9 +5,9 @@ Coding practice of Anderson's CFD book: __Computational Fluid Dynamics: The basi
     TODO
 
 ## Laval
-The Laval pipe, a classical 1D problem, based on Euler equation.
+    The Laval pipe, a classical 1D problem, based on Euler equation.
 ### 0-Subsonic-Supersonic Isentropic Flow
-    MacCormack Scheme is applied.
+    MacCormack Scheme.
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
@@ -19,3 +19,13 @@ Pay attention to B.C. at both inlet and outlet!
 
 ### 1-Subsonic Isentropic Flow
     MacCormack Scheme.  
+    Clearly, velocity peaks at central.
+    
+Usage:
+> * Compile: `g++ main.cc -o Laval`
+> * Execute: `./Laval`
+> * Animate: `python3 animate`
+
+### 2-Conservative form for Subsonic-Supersonic Isentropic Flow
+    MacCormack Scheme.
+    

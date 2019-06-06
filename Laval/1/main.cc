@@ -12,7 +12,7 @@ using namespace std;
 const size_t WIDTH = 16;
 const size_t DIGITS = 6;
 const size_t OUTPUT_GAP = 100;
-const size_t MAX_STEP = 5000;
+const size_t MAX_STEP = 10000;
 
 const double G0 = 1.4;
 const double G1 = 1 / G0;
@@ -22,7 +22,7 @@ const double W_air = 28.9; // Kg/Kmol
 const double Rw = R / W_air;
 
 const double P0 = 10 * 101325.0; // Pa
-const double Pe = 0.9 * P0; // Pa
+const double Pe = 0.93 * P0; // Pa
 const double T0 = 300.0; // K
 const double rho0 = P0 / (R*T0);
 const double a0 = sqrt(G0 * Rw * T0);
@@ -32,6 +32,8 @@ const double CFL = 0.5;
 size_t iter_cnt = 0;
 double t = 0.0;
 
+ofstream history;
+
 const int N = 31;
 const double dx = 0.1;
 vector<double> A(N, 0.0), x(N, 0.0);
@@ -40,6 +42,20 @@ vector<double> rho_bar(N), T_bar(N), V_bar(N);
 vector<double> drhodt(N, 0.0), dVdt(N, 0.0), dTdt(N, 0.0);
 vector<double> drhodt_bar(N, 0.0), dVdt_bar(N, 0.0), dTdt_bar(N, 0.0);
 vector<double> drhodt_av(N, 0.0), dVdt_av(N, 0.0), dTdt_av(N, 0.0);
+
+void write_result()
+{
+    history << iter_cnt << '\t' << t << endl;
+    for(int i = 0; i < N; ++i)
+    {
+        history << setw(WIDTH) << setprecision(DIGITS) << rho[i];
+        history << setw(WIDTH) << setprecision(DIGITS) << V[i];
+        history << setw(WIDTH) << setprecision(DIGITS) << T[i];
+        history << setw(WIDTH) << setprecision(DIGITS) << P[i];
+        history << setw(WIDTH) << setprecision(DIGITS) << Ma[i];
+        history << setw(WIDTH) << setprecision(DIGITS) << mdot[i] << endl;
+    }
+}
 
 void init()
 {
@@ -65,6 +81,17 @@ void init()
         Ma[i] = V[i] / sqrt(T[i]);
         mdot[i] = rho[i] * V[i] * A[i];
     }
+
+    // Output
+    history.open("flow.txt");
+    history << N << endl;
+    for(int i = 0; i < N; ++i)
+        history << x[i] << '\t';
+    history << endl;
+    for(int i = 0; i < N; ++i)
+        history << A[i] << '\t';
+    history << endl;
+    write_result(); // Initial field
 }
 
 void loop()
@@ -180,7 +207,7 @@ bool check_convergence()
     return rms < 1e-3 || iter_cnt > MAX_STEP;
 }
 
-void output()
+void output_tecplot()
 {
     if(iter_cnt % OUTPUT_GAP != 0)
         return;
@@ -218,17 +245,23 @@ void solve()
     bool ok = false;
     while(!ok)
     {
+        //output_tecplot();
         cout << "Iter" << ++iter_cnt << ":\n";
         loop();
-        output();
+        write_result();
         ok = check_convergence();
     }
+}
+
+void finalize()
+{
+    history.close();
 }
 
 int main(int argc, char *argv[])
 {
     init();
-    output();
     solve();
+    finalize();
     return 0;
 }
