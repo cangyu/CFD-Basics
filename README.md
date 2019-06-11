@@ -42,7 +42,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 ![steady-shock](Laval/3/steady.png)
 
 ## Couette
-	Viscous flow between 2 parallel plate.  
+Viscous flow between 2 parallel plate.  
 ### 0-1D simulation
 The simplified G.E. is similiar with heat transfer equation, which is parabolic.  
 Crank-Nicolson method is used, which is __unconditionally__ stable due to its implicitness. Hence, larger timestep can be taken via tuning the parameter `E`.  
