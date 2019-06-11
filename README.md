@@ -8,7 +8,7 @@ Coding practice of Anderson's CFD book: __Computational Fluid Dynamics: The basi
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
-> * Animate: `python3 animate`
+> * Animate: `python3 animate.py`
 
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield looks like:  
 ![steady-laval](Laval/0/steady.png)
@@ -21,7 +21,7 @@ Pay attention to B.C. at both inlet and outlet!
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
-> * Animate: `python3 animate`
+> * Animate: `python3 animate.py`
 
 ### 2-Conservative form for Subsonic-Supersonic Isentropic Flow
     MacCormack Scheme.
@@ -29,7 +29,7 @@ Usage:
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
-> * Animate: `python3 animate`
+> * Animate: `python3 animate.py`
 
 ### 3-Shockwave Capture
     MacCormack Scheme.  
@@ -38,7 +38,7 @@ Usage:
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
-> * Animate: `python3 animate`
+> * Animate: `python3 animate.py`
 
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield looks like:  
 ![steady-shock](Laval/3/steady.png)
@@ -48,6 +48,13 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 ### 0-1D simulation
 	The simplified G.E. is similiar with heat transfer equation, which is parabolic.  
 	Crank-Nicolson method.  
+
+Usage:
+> * Compile: `g++ main.cc -o Couette`
+> * Execute: `./Couette`
+> * Animate: `python3 animate.py`
+
+Be careful with the index inside the Thomas algorithm!
 
 ### 1-2D simulation
 	TODO

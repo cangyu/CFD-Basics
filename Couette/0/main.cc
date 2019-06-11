@@ -122,6 +122,8 @@ void loop(void)
 	// Update
 	for (int j = 1; j < N - 1; ++j)
 		u[j] = u_new[j - 1];
+
+	t += dt;
 }
 
 bool check_convergence(void)
