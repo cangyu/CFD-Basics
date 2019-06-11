@@ -44,7 +44,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 ## Couette
 Viscous flow between 2 parallel plate.  
 ### 0-1D simulation
-The simplified G.E. is similiar with heat transfer equation, which is parabolic.  
+The simplified G.E. is similiar with unsteady heat transfer equation, which is __parabolic__.  
 Crank-Nicolson method is used, which is __unconditionally__ stable due to its implicitness. Hence, larger timestep can be taken via tuning the parameter `E`.  
 However, errors during iteration become larger when `E` is increasing due to larger truncation error.  
 This well illustrates that, even with implict scheme, timestep can not go to infinity!(an optimal timestep in between)
@@ -63,4 +63,4 @@ Be careful with the index inside the Thomas algorithm!
 The Pressure-Correction method is used.
 
 ## Cavity
-    TODO
+2D Lid-driven cavity flow.
