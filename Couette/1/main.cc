@@ -16,11 +16,10 @@ const size_t DIGITS = 6;
 const double D = 1.0;
 const int N = 21;
 const double dy = D / (N - 1);
-const double Re = 5000.0;
-const double E = 10.0;
-const double dt = E * Re * pow(dy, 2);
-const double A = -E / 2;
-const double B = 1 + E;
+const double Re = 100.0;
+const double dt = 0.5 * Re * pow(dy, 2);
+const double A = -dt / (2 * pow(dy, 2) * Re);
+const double B = 1.0 + dt / (pow(dy, 2) * Re);
 
 ofstream result;
 
@@ -106,8 +105,9 @@ void thomas(const vector<double>& a, const vector<double>& b, const vector<doubl
 void loop(void)
 {
 	// The RHS
+	const double factor = dt / (pow(dy, 2) * Re);
 	for (int j = 1; j < N - 1; ++j)
-		K[j] = (1.0 - E) * u[j] + E * (u[j - 1] + u[j + 1]) / 2;
+		K[j] = (1.0 - factor) * u[j] + factor * (u[j - 1] + u[j + 1]) / 2;
 
 	K[1] -= A * u[0];
 	K[N - 2] -= A * u[N - 1];
