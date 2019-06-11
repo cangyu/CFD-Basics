@@ -43,5 +43,14 @@ Usage:
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield looks like:  
 ![steady-shock](Laval/3/steady.png)
 
+## Couette
+	Viscous flow between 2 parallel plate.  
+### 0-1D simulation
+	The simplified G.E. is similiar with heat transfer equation, which is parabolic.  
+	Crank-Nicolson method.  
+
+### 1-2D simulation
+	TODO
+
 ## Cavity
     TODO
