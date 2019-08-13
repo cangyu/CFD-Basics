@@ -3,7 +3,6 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
-#include <Eigen/Sparse>
 
 using namespace std;
 using namespace Eigen;
