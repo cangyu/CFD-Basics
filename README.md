@@ -3,7 +3,7 @@ Coding practice of Anderson's CFD book: __Computational Fluid Dynamics: The basi
 
 ## Laval
 The Laval pipe, a classical 1D problem, based on Euler equation.
-### 0-Subsonic-Supersonic Isentropic Flow
+### 0 Subsonic-Supersonic Isentropic Flow
 MacCormack Scheme.  
 Usage:
 > * Compile: `g++ main.cc -o Laval`
@@ -15,7 +15,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 
 Pay attention to B.C. at both inlet and outlet!
 
-### 1-Subsonic Isentropic Flow
+### 1 Subsonic Isentropic Flow
 MacCormack Scheme.  
 Clearly, velocity peaks at central.  
 Usage:
@@ -23,14 +23,14 @@ Usage:
 > * Execute: `./Laval`
 > * Animate: `python3 animate.py`
 
-### 2-Conservative form for Subsonic-Supersonic Isentropic Flow
+### 2 Conservative form for Subsonic-Supersonic Isentropic Flow
 MacCormack Scheme.  
 Usage:
 > * Compile: `g++ main.cc -o Laval`
 > * Execute: `./Laval`
 > * Animate: `python3 animate.py`
 
-### 3-Shockwave Capture
+### 3 Shockwave Capture
 MacCormack Scheme.  
 Add artificial viscosity at both prediction and correction steps.  
 Usage:
@@ -43,7 +43,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 
 ## Couette
 Viscous flow between 2 parallel plate.  
-### 0-1D simulation
+### 0 1D simulation
 The simplified G.E. is similiar with unsteady heat transfer equation, which is __parabolic__.  
 Crank-Nicolson method is used, which is __unconditionally__ stable due to its implicitness. Hence, larger timestep can be taken via tuning the parameter `E`.  
 However, errors during iteration become larger when `E` is increasing due to larger truncation error.  
@@ -59,7 +59,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 
 Be careful with the index inside the Thomas algorithm!
 
-### 1-2D simulation
+### 1 2D simulation
 The Pressure-Correction method is used.
 
 ## Cavity
