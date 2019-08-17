@@ -100,12 +100,12 @@ Array2D v(Nx + 2, Ny + 1, 0.0), v_star(Nx + 2, Ny + 1, 0.0), v_prime(Nx + 2, Ny 
 void write_result(void)
 {
 	result << iter_cnt << ' ' << t;
-	
+
 	// Pressure
-	for(int j = 1; j <= Ny; ++j)
+	for (int j = 1; j <= Ny; ++j)
 	{
 		result << endl;
-		for(int i = 1; i <= Nx; ++i)
+		for (int i = 1; i <= Nx; ++i)
 			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
 	}
 
@@ -138,11 +138,6 @@ void init(void)
 		result << ' ' << y[j];
 	result << endl;
 	write_result();
-}
-
-void finalize(void)
-{
-	result.close();
 }
 
 void JacobiMethod()
@@ -182,24 +177,24 @@ void ImplicitMethod()
 void SIMPLE(void)
 {
 	// u_star at inner points
-	for(int j = 2; j <= Ny-1; ++j)
+	for (int j = 2; j <= Ny - 1; ++j)
 		for (int i = 2; i <= Nx; ++i)
 		{
 			double v_bar1 = 0.5*(v(i, j + 1) + v(i + 1, j + 1));
 			double v_bar2 = 0.5*(v(i, j) + v(i + 1, j));
-			
+
 			double t11 = rho * pow(u(i + 1, j), 2) - rho * pow(u(i - 1, j), 2);
 			double t12 = rho * u(i, j + 1)*v_bar1 - rho * u(i, j - 1)*v_bar2;
 			double t21 = u(i + 1, j) - 2 * u(i, j) + u(i - 1, j);
 			double t22 = u(i, j + 1) - 2 * u(i, j) + u(i, j - 1);
 			double A_star = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
-			
+
 			double loc_rhou_star = rho * u_star(i, j) + A_star * dt - dt / dx * (p_star(i, j) - p_star(i - 1, j));
 			u_star(i, j) = loc_rhou_star / rho;
 		}
 
 	// v_star at inner points
-	for (int i = 2; i <= Nx + 1; ++i)
+	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
 			double u_bar1 = 0.5 *(u(i, j - 1) + u(i, j));
@@ -213,7 +208,7 @@ void SIMPLE(void)
 
 			double loc_rhov_star = rho * v_star(i, j) + B_star * dt - dt / dy * (p_star(i - 1, j) - p_star(i - 1, j - 1));
 			v_star(i, j) = loc_rhov_star / rho;
-		}	
+		}
 
 	// Solve p_prime at inner points
 	//JacobiMethod();
@@ -225,7 +220,7 @@ void SIMPLE(void)
 		{
 			// Update with relaxation
 			p(i, j) = p_star(i, j) + alpha_p * p_prime(i, j);
-			
+
 			// For next round
 			p_star(i, j) = p(i, j);
 		}
@@ -243,7 +238,7 @@ void SIMPLE(void)
 	}
 
 	// Correct v at inner nodes
-	for (int i = 2; i <= Nx + 1; ++i)
+	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 			v(i, j) = v_star(i, j);
 
@@ -280,6 +275,11 @@ void solve(void)
 		write_result();
 		converged = check_convergence();
 	}
+}
+
+void finalize(void)
+{
+	result.close();
 }
 
 int main(int argc, char *argv[])
