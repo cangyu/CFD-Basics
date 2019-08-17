@@ -71,9 +71,8 @@ const size_t DIGITS = 7;
 const double L = 0.5; // m
 const double D = 0.01; // m
 const double Ue = 1.0; // m/s
-const double rho = 0.002377; // Kg/m3
-const double Re = 63.6;
-const double mu = 3.737e-7; // Kg/m/s
+const double rho = 1.225; // Kg/m3
+const double mu = 3.737e-5; // Kg/m/s
 
 const int Nx = 21, Ny = 11;
 const double dx = L / (Nx - 1), dy = D / (Ny - 1);
@@ -84,7 +83,7 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 500;
+const int MAX_ITER_NUM = 1000;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
@@ -175,6 +174,11 @@ void GaussSeidelMethod()
 	}
 }
 
+void ImplicitMethod()
+{
+	// TODO
+}
+
 void SIMPLE(void)
 {
 	// u_star at inner points
@@ -194,13 +198,6 @@ void SIMPLE(void)
 			u_star(i, j) = loc_rhou_star / rho;
 		}
 
-	// u_star at virtual points, transparent
-	for (int j = 1; j <= Ny; ++j)
-	{
-		u_star(1, j) = u_star(2, j); // Inlet
-		u_star(Nx + 1, j) = u_star(Nx, j); // Outlet
-	}
-
 	// v_star at inner points
 	for (int i = 2; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
@@ -218,14 +215,9 @@ void SIMPLE(void)
 			v_star(i, j) = loc_rhov_star / rho;
 		}	
 
-	// v_star at virtual points
-	for (int j = 1; j <= Ny + 1; ++j)
-	{
-		v_star(Nx + 2, j) = v_star(Nx + 1, j); // Outlet
-	}
-
 	// Solve p_prime at inner points
-	JacobiMethod();
+	//JacobiMethod();
+	GaussSeidelMethod();
 
 	// Correct p
 	for (int i = 2; i < Nx; ++i)
@@ -238,15 +230,33 @@ void SIMPLE(void)
 			p_star(i, j) = p(i, j);
 		}
 
-	// Correct u
+	// Correct u at inner nodes
 	for (int j = 2; j <= Ny - 1; ++j)
-		for (int i = 1; i <= Nx + 1; ++i)
+		for (int i = 2; i <= Nx; ++i)
 			u(i, j) = u_star(i, j);
 
-	// Correct v
-	for (int i = 2; i <= Nx + 2; ++i)
+	// Linear extrapolation of u at virtual nodes
+	for (int j = 2; j <= Ny - 1; ++j)
+	{
+		u(1, j) = 2 * u(2, j) - u(3, j);
+		u(Nx + 1, j) = 2 * u(Nx, j) - u(Nx - 1, j);
+	}
+
+	// Correct v at inner nodes
+	for (int i = 2; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 			v(i, j) = v_star(i, j);
+
+	// Linear extrapolation of v at both top and bottom virtual nodes
+	for (int i = 2; i <= Nx + 1; ++i)
+	{
+		v(i, 1) = -v(i, 2);
+		v(i, Ny + 1) = -v(i, Ny);
+	}
+
+	// Linear extrapolation of v at right virtual nodes
+	for (int j = 2; j <= Ny; ++j)
+		v(Nx + 2, j) = 2 * v(Nx + 1, j) - v(Nx, j);
 }
 
 bool check_convergence(void)
