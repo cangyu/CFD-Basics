@@ -65,7 +65,7 @@ public:
 	}
 };
 
-const size_t WIDTH = 12;
+const size_t WIDTH = 16;
 const size_t DIGITS = 7;
 
 const double L = 0.5; // m
