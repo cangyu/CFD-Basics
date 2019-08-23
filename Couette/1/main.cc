@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cassert>
+#include <limits>
+#include <Eigen/Sparse>
 
 using namespace std;
 
@@ -17,13 +19,7 @@ private:
 	size_t Nx, Ny;
 
 public:
-	Array2D(size_t nx, size_t ny, double val = 0.0) :
-		Nx(nx),
-		Ny(ny),
-		data(nx*ny, val)
-	{
-		// Empty body
-	}
+	Array2D(size_t nx, size_t ny, double val = 0.0) : Nx(nx), Ny(ny), data(nx*ny, val) {}
 
 	// 0-based indexing
 	double &at(int i, int j)
@@ -53,16 +49,6 @@ public:
 	{
 		std::fill(data.begin(), data.end(), x);
 	}
-
-	double max() const
-	{
-		return *max_element(data.begin(), data.end());
-	}
-
-	double min() const
-	{
-		return *min_element(data.begin(), data.end());
-	}
 };
 
 const size_t WIDTH = 16;
@@ -83,7 +69,7 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 1000;
+const int MAX_ITER_NUM = 1001;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
@@ -151,8 +137,6 @@ void JacobiMethod()
 				double d = (rho*u_star(i + 1, j) - rho * u_star(i, j)) / dx + (rho*v_star(i + 1, j + 1) - rho * v_star(i + 1, j)) / dy;
 				p_prime(i, j) = -(b * pp(i + 1, j) + b * pp(i - 1, j) + c * pp(i, j + 1) + c * pp(i, j - 1) + d) / a;
 			}
-
-		//cout << "\tInternal loop:" << r + 1 << ": Max(p\')=" << p_prime.max() << " Min(p\')=" << p_prime.min() << endl;
 	}
 }
 
@@ -171,7 +155,81 @@ void GaussSeidelMethod()
 
 void ImplicitMethod()
 {
-	// TODO
+	typedef Eigen::SparseMatrix<double> SpMat;
+	typedef Eigen::Triplet<double> T;
+
+	const int m = Nx * Ny;
+	std::vector<T> coef;
+	Eigen::VectorXd rhs(m);
+	SpMat A(m, m);
+
+	// Calculating coefficients
+	for (int i = 0; i < Nx; ++i)
+		for (int j = 0; j < Ny; ++j)
+		{
+			const int id = j * Nx + i;
+			const int id_w = id - 1;
+			const int id_e = id + 1;
+			const int id_n = id + Nx;
+			const int id_s = id - Nx;
+
+			if (i == 0 || i == Nx - 1) // Inlet and Outlet
+			{
+				coef.push_back(T(id, id, 1.0));
+				rhs(id) = 0.0;
+			}
+			else if (j == 0) // Bottom
+			{
+				coef.push_back(T(id, id, 1.0));
+				coef.push_back(T(id, id_n, -1.0));
+				rhs(id) = 0.0;
+			}
+			else if (j == Ny - 1) // Top
+			{
+				coef.push_back(T(id, id, 1.0));
+				coef.push_back(T(id, id_s, -1.0));
+				rhs(id) = 0.0;
+			}
+			else // Inner
+			{
+				// Use 0-based interface
+				const double d = (rho*u_star.at(i + 1, j) - rho * u_star.at(i, j)) / dx + (rho*v_star.at(i + 1, j + 1) - rho * v_star.at(i + 1, j)) / dy;
+
+				coef.push_back(T(id, id, a));
+				coef.push_back(T(id, id_w, b));
+				coef.push_back(T(id, id_e, b));
+				coef.push_back(T(id, id_n, c));
+				coef.push_back(T(id, id_s, c));
+				rhs(id) = -d;
+			}
+		}
+
+	// Construct sparse matrix
+	A.setFromTriplets(coef.begin(), coef.end());
+
+	// Solve the linear system: Ax = rhs
+	Eigen::SimplicialCholesky<SpMat> chol(A);
+	Eigen::VectorXd x = chol.solve(rhs);
+
+	// Update p_prime at inner
+	for (int i = 1; i < Nx - 1; ++i)
+		for (int j = 1; j < Ny - 1; ++j)
+		{
+			const int id = j * Nx + i;
+			p_prime.at(i, j) = x(id);
+		}
+
+	// Enforce B.C. of p_prime: zero at inlet and outlet, zero-gradient at top and bottom.
+	for (int j = 1; j <= Ny; ++j)
+	{
+		p_prime(1, j) = 0.0;
+		p_prime(Nx, j) = 0.0;
+	}
+	for (int i = 2; i <= Nx - 1; ++i)
+	{
+		p_prime(i, 1) = p_prime(i, 2);
+		p_prime(i, Ny) = p_prime(i, Ny - 1);
+	}
 }
 
 void SIMPLE(void)
@@ -211,12 +269,13 @@ void SIMPLE(void)
 		}
 
 	// Solve p_prime at inner points
-	//JacobiMethod();
-	GaussSeidelMethod();
+	// JacobiMethod();
+	// GaussSeidelMethod();
+	ImplicitMethod();
 
 	// Correct p
-	for (int i = 2; i < Nx; ++i)
-		for (int j = 2; j < Ny; ++j)
+	for (int i = 1; i <= Nx; ++i)
+		for (int j = 1; j <= Ny; ++j)
 		{
 			// Update with relaxation
 			p(i, j) = p_star(i, j) + alpha_p * p_prime(i, j);
@@ -243,6 +302,7 @@ void SIMPLE(void)
 			v(i, j) = v_star(i, j);
 
 	// Linear extrapolation of v at both top and bottom virtual nodes
+	// No-Penetration at both top and bottom
 	for (int i = 2; i <= Nx + 1; ++i)
 	{
 		v(i, 1) = -v(i, 2);
@@ -256,9 +316,38 @@ void SIMPLE(void)
 
 bool check_convergence(void)
 {
-	cout << "Max(u)=" << u.max() << " Min(u)=" << u.min() << endl;
-	cout << "Max(v)=" << v.max() << " Min(v)=" << v.min() << endl;
-	cout << "Max(p)=" << p.max() << " Min(p)=" << p.min() << endl;
+	// Statistics of u
+	double u_max = numeric_limits<double>::min();
+	double u_min = numeric_limits<double>::max();
+	for (int i = 2; i <= Nx; ++i)
+		for (int j = 1; j <= Ny; ++j)
+		{
+			u_max = max(u_max, u(i, j));
+			u_min = min(u_min, u(i, j));
+		}
+	cout << "Max(u)=" << u_max << " Min(u)=" << u_min << endl;
+
+	// Statistics of v
+	double v_max = numeric_limits<double>::min();
+	double v_min = numeric_limits<double>::max();
+	for (int i = 2; i <= Nx + 1; ++i)
+		for (int j = 2; j <= Ny; ++j)
+		{
+			v_max = max(v_max, v(i, j));
+			v_min = min(v_min, v(i, j));
+		}
+	cout << "Max(v)=" << v_max << " Min(v)=" << v_min << endl;
+
+	// Statistics of p
+	double p_max = numeric_limits<double>::min();
+	double p_min = numeric_limits<double>::max();
+	for (int i = 1; i <= Nx; ++i)
+		for (int j = 1; j <= Ny; ++j)
+		{
+			p_max = max(p_max, p(i, j));
+			p_min = min(p_min, p(i, j));
+		}
+	cout << "Max(p)=" << p_max << " Min(p)=" << p_min << endl;
 
 	return iter_cnt > MAX_ITER_NUM;
 }

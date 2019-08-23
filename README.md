@@ -59,7 +59,9 @@ Usage:
 > * Animate: `python3 animate.py`
 
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield(with `E=1.0`) looks like:  
-![steady-couette](Couette/0/steady.png)  
+
+<div align=center><img src="Couette/0/steady.png"/></div>
+
 Be careful with the index inside the Thomas algorithm!
 
 ### (1) 2D simulation
