@@ -1,7 +1,7 @@
 # CFD Basics
 Coding practice of Anderson's CFD book: __Computational Fluid Dynamics: The basics with applications__
 
-## Laval
+## Laval (Chapter7)
 The Laval pipe, a classical 1D problem, based on Euler equation.
 ### (0) Subsonic-Supersonic Isentropic Flow
 MacCormack Scheme.  
@@ -41,12 +41,12 @@ Usage:
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield looks like:  
 ![steady-shock](Laval/3/steady.png)
 
-## Couette
+## Couette (Chapter8)
 Viscous flow between 2 parallel plate.  
 ### (0) 1D simulation
 The simplified G.E. is given as:  
 
-<div align=center><img src="Couette/0/eqn.png"/></div>
+<div align=center><img src="Couette/0-1D/eqn.png"/></div>
 
 it is similiar with unsteady heat transfer equation, which is __parabolic__.  
 Crank-Nicolson method is used, which is __unconditionally__ stable due to its implicitness. Hence, larger time-step can be taken via tuning the parameter `E`.  
@@ -60,15 +60,48 @@ Usage:
 
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield(with `E=1.0`) looks like:  
 
-<div align=center><img src="Couette/0/steady.png"/></div>
+<div align=center><img src="Couette/0-1D/steady.png"/></div>
 
 Be careful with the index inside the Thomas algorithm!
 
-### (1) 2D simulation
-Pressure-Correction method in general. __Steady-state__ solution is resolved finally.  
-Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are used on both __staggered__ and __colocated__ grids. The colocated grids tested include __pure tetrahedron__, __pure hexahedron__ and __mixed__. All these colocated grids are accessed under ANSYS Fluent _(*.msh)_ format.
+### (1) 2D simulation (__Steady__)
+Pressure-Correction method in general.  
+Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are used on both __staggered__ and __colocated__ grids. 
+
+#### (1.1) Staggered Grid
+Grid with virtual nodes is adopted as illustrated in `Chapter 8.4.1`.  
+Variable placement follows the convention introduced in `Chapter 6.8.4`.  
+Standard TECPLOT ASCII data files will be produced every time-step.
+
+##### (1.1.1) SIMPLE
+Standard SIMPLE method is used to achieve final steady-state result.  
+The poisson equation is solved implicitly by solving a linear system.  
+
+Values on __Boundary__:
+-|Left Inlet|Right Outlet|Top Lid|Bottom Wall
+:-:|:-:|:-:|:-:|:-:
+p'|zero|zero|zero-gradient|zero-gradient
+u|linear extrapolation|linear extrapolation|Ue|0
+v|0|by computation|0|0
+
+Values on __virtual__ nodes are mostly calculated by __linear extrapolation__ from neighbouring nodes.  
+
+Usage:
+> * Compile: `g++ main.cc -I /usr/include/eigen3 -o Couette`
+> * Execute: `./Couette`
+> * Animate: `Tecplot` or `ParaView` or `EnSight`
+
+Path of `Eigen3` may vary in different systems or platforms, plz adjust it accordingly.
+
+##### (1.1.2) SIMPLER
+
+##### (1.1.3) SIMPLEC
+
+##### (1.1.4) PISO
+
+#### (1.2) Colocated Grid
+The colocated grids tested include __pure tetrahedron__, __pure hexahedron__ and __mixed__. All these grids are accessed under ANSYS Fluent _(*.msh)_ format.
 
 
-
-## Plate
-2D Plate.
+## Plate (Chapter9)
+Supersonic flow over a plate.
