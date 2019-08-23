@@ -65,7 +65,10 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 Be careful with the index inside the Thomas algorithm!
 
 ### (1) 2D simulation
-The Pressure-Correction method is used.
+Pressure-Correction method in general. __Steady-state__ solution is resolved finally.  
+Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are used on both __staggered__ and __colocated__ grids. The colocated grids tested include __pure tetrahedron__, __pure hexahedron__ and __mixed__. All these colocated grids are accessed under ANSYS Fluent _(*.msh)_ format.
 
-## Cavity
-2D Lid-driven cavity flow.
+
+
+## Plate
+2D Plate.
