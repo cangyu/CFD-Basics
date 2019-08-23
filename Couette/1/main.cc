@@ -64,7 +64,7 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 1001;
+const int MAX_ITER_NUM = 2001;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
@@ -126,7 +126,10 @@ void output(void)
 	result.close();
 }
 
-void JacobiMethod() // Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
+// Jacobi method used to solve the elliptic equation iteratively.
+// Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
+// By default, p_prime is set to 0 at all 4 boundaries.
+void JacobiMethod() 
 {
 	for (int r = 0; r < 200; ++r)
 	{
@@ -135,12 +138,20 @@ void JacobiMethod() // Only suitable for Dirichlet B.C. and will blow up with Ne
 			for (int j = 2; j < Ny; ++j)
 			{
 				double d = (rho*u_star(i + 1, j) - rho * u_star(i, j)) / dx + (rho*v_star(i + 1, j + 1) - rho * v_star(i + 1, j)) / dy;
+				if (d > d_max)
+					d_max = d;
+				if (d < d_min)
+					d_min = d;
+
 				p_prime(i, j) = -(b * pp(i + 1, j) + b * pp(i - 1, j) + c * pp(i, j + 1) + c * pp(i, j - 1) + d) / a;
 			}
 	}
 }
 
-void GaussSeidelMethod() // Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
+// Gauss-Seidel method used to solve the elliptic equation iteratively, where new values are utilized immediately.
+// Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
+// By default, p_prime is set to 0 at all 4 boundaries.
+void GaussSeidelMethod() 
 {
 	for (int r = 0; r < 200; ++r)
 	{
@@ -148,6 +159,11 @@ void GaussSeidelMethod() // Only suitable for Dirichlet B.C. and will blow up wi
 			for (int j = 2; j < Ny; ++j)
 			{
 				double d = (rho*u_star(i + 1, j) - rho * u_star(i, j)) / dx + (rho*v_star(i + 1, j + 1) - rho * v_star(i + 1, j)) / dy;
+				if (d > d_max)
+					d_max = d;
+				if (d < d_min)
+					d_min = d;
+
 				p_prime(i, j) = -(b * p_prime(i + 1, j) + b * p_prime(i - 1, j) + c * p_prime(i, j + 1) + c * p_prime(i, j - 1) + d) / a;
 			}
 	}
@@ -194,6 +210,10 @@ void ImplicitMethod() // Can handle both Dirichlet and Neumann B.C.
 			{
 				// Use 0-based interface
 				const double d = (rho*u_star.at(i + 1, j) - rho * u_star.at(i, j)) / dx + (rho*v_star.at(i + 1, j + 1) - rho * v_star.at(i + 1, j)) / dy;
+				if (d > d_max)
+					d_max = d;
+				if (d < d_min)
+					d_min = d;
 
 				coef.push_back(T(id, id, a));
 				coef.push_back(T(id, id_w, b));
@@ -269,6 +289,9 @@ void SIMPLE(void)
 		}
 
 	// Solve p_prime
+	d_min = numeric_limits<double>::max();
+	d_max = numeric_limits<double>::min();
+
 	// JacobiMethod();
 	// GaussSeidelMethod();
 	ImplicitMethod();
@@ -316,6 +339,9 @@ void SIMPLE(void)
 
 bool check_convergence(void)
 {
+	// Statistics of the mass flux residue
+	cout << "Max(d)=" << d_max << " Min(d)=" << d_min << endl;
+
 	// Statistics of u
 	double u_max = numeric_limits<double>::min();
 	double u_min = numeric_limits<double>::max();
@@ -349,7 +375,7 @@ bool check_convergence(void)
 		}
 	cout << "Max(p)=" << p_max << " Min(p)=" << p_min << endl;
 
-	return iter_cnt > MAX_ITER_NUM;
+	return iter_cnt > MAX_ITER_NUM || max(abs(d_max), abs(d_min)) < 1e-4;
 }
 
 int main(int argc, char *argv[])
