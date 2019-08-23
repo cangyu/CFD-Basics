@@ -78,6 +78,7 @@ Standard SIMPLE method is used to achieve final steady-state result.
 The poisson equation is solved implicitly by solving a linear system.  
 
 Values on __Boundary__:
+
 -|Left Inlet|Right Outlet|Top Lid|Bottom Wall
 :-:|:-:|:-:|:-:|:-:
 p'|zero|zero|zero-gradient|zero-gradient
