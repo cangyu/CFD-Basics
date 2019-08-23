@@ -15,23 +15,23 @@ using namespace std;
 class Array2D
 {
 private:
-	vector<double> data;
-	size_t Nx, Ny;
+	vector<double> m_data;
+	size_t m_Nx, m_Ny;
 
 public:
-	Array2D(size_t nx, size_t ny, double val = 0.0) : Nx(nx), Ny(ny), data(nx*ny, val) {}
+	Array2D(size_t nx, size_t ny, double val = 0.0) : m_Nx(nx), m_Ny(ny), m_data(nx*ny, val) {}
 
 	// 0-based indexing
 	double &at(int i, int j)
 	{
-		int idx = i + Nx * j;
-		return data[idx];
+		int idx = i + m_Nx * j;
+		return m_data[idx];
 	}
 
 	double at(int i, int j) const
 	{
-		int idx = i + Nx * j;
-		return data[idx];
+		int idx = i + m_Nx * j;
+		return m_data[idx];
 	}
 
 	// 1-based indexing
@@ -43,11 +43,6 @@ public:
 	double operator()(int i, int j) const
 	{
 		return at(i - 1, j - 1);
-	}
-
-	void fill(double x)
-	{
-		std::fill(data.begin(), data.end(), x);
 	}
 };
 
@@ -74,59 +69,64 @@ const int MAX_ITER_NUM = 1001;
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
 const double c = -dt / dydy;
+double d_min = numeric_limits<double>::max(), d_max = numeric_limits<double>::min();
 
 const double alpha_p = 0.1;
-
-ofstream result;
 
 Array2D p(Nx, Ny, 0.0), p_star(Nx, Ny, 0.0), p_prime(Nx, Ny, 0.0);
 Array2D u(Nx + 1, Ny, 0.0), u_star(Nx + 1, Ny, 0.0), u_prime(Nx + 1, Ny, 0.0);
 Array2D v(Nx + 2, Ny + 1, 0.0), v_star(Nx + 2, Ny + 1, 0.0), v_prime(Nx + 2, Ny + 1, 0.0);
 
-void write_result(void)
+void output(void)
 {
-	result << iter_cnt << ' ' << t;
-
-	// Pressure
-	for (int j = 1; j <= Ny; ++j)
-	{
-		result << endl;
+	Array2D u_interp(Nx, Ny, 0.0);
+	for (int i = 1; i <= Nx; ++i)
+		u_interp(i, 1) = 0.0; // Bottom
+	for (int j = 2; j <= Ny - 1; ++j)
 		for (int i = 1; i <= Nx; ++i)
-			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
+			u_interp(i, j) = (u(i, j) + u(i + 1, j)) / 2; // Inner
+	for (int i = 1; i <= Nx; ++i)
+		u_interp(i, Ny) = Ue; // Top
+
+	Array2D v_interp(Nx, Ny, 0.0);
+	for (int i = 1; i <= Nx; ++i)
+		v_interp(i, 1) = 0.0; // Bottom
+	for (int j = 2; j <= Ny - 1; ++j)
+	{
+		v_interp(1, j) = 0.0; // Left
+		for (int i = 3; i <= Nx + 1; ++i)
+			v_interp(i - 1, j) = (v(i, j) + v(i, j + 1)) / 2; // Inner and Right
 	}
+	for (int i = 1; i <= Nx; ++i)
+		v_interp(i, Ny) = 0.0; // Top
 
-	result << endl;
-}
-
-void init(void)
-{
-	cout << "mu=" << mu << endl;
-
-	// Coordinates
-	for (int i = 1; i < Nx; ++i)
-		x[i] = L * i / (Nx - 1);
-	for (int j = 1; j < Ny; ++j)
-		y[j] = D * j / (Ny - 1);
-
-	// Velocity field
-	for (int i = 1; i <= Nx + 1; ++i)
-		u_star(i, Ny) = u(i, Ny) = Ue;
-
-	v(15, 5) = v_star(15, 5) = 0.5; // Initial peak to ensure 2D flow structure
+	// Create Tecplot data file.
+	ofstream result("flow" + to_string(iter_cnt) + ".dat");
+	if (!result)
+		throw("Failed to create datafile!");
 
 	// Header
-	result.open("flow.txt");
-	result << Nx << '\t' << Ny << endl;
-	for (int i = 0; i < Nx; ++i)
-		result << ' ' << x[i];
-	result << endl;
-	for (int j = 0; j < Ny; ++j)
-		result << ' ' << y[j];
-	result << endl;
-	write_result();
+	result << "TITLE = \"t=" << t << "\"" << endl;
+	result << "VARIABLES = \"X\", \"Y\", \"P\", \"U\", \"V\"" << endl;
+	result << "ZONE I=" << Nx << ", J=" << Ny << ", F=POINT" << endl;
+
+	// Flowfield data
+	for(int j=1; j<=Ny; ++j)
+		for (int i = 1; i <= Nx; ++i)
+		{
+			result << setw(WIDTH) << setprecision(DIGITS) << x[i - 1];
+			result << setw(WIDTH) << setprecision(DIGITS) << y[j - 1];
+			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << u_interp(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << v_interp(i, j);
+			result << endl;
+		}
+
+	// Finalize
+	result.close();
 }
 
-void JacobiMethod()
+void JacobiMethod() // Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
 {
 	for (int r = 0; r < 200; ++r)
 	{
@@ -140,7 +140,7 @@ void JacobiMethod()
 	}
 }
 
-void GaussSeidelMethod()
+void GaussSeidelMethod() // Only suitable for Dirichlet B.C. and will blow up with Neumann B.C.
 {
 	for (int r = 0; r < 200; ++r)
 	{
@@ -153,13 +153,13 @@ void GaussSeidelMethod()
 	}
 }
 
-void ImplicitMethod()
+void ImplicitMethod() // Can handle both Dirichlet and Neumann B.C.
 {
 	typedef Eigen::SparseMatrix<double> SpMat;
 	typedef Eigen::Triplet<double> T;
 
 	const int m = Nx * Ny;
-	std::vector<T> coef;
+	vector<T> coef;
 	Eigen::VectorXd rhs(m);
 	SpMat A(m, m);
 
@@ -268,7 +268,7 @@ void SIMPLE(void)
 			v_star(i, j) = loc_rhov_star / rho;
 		}
 
-	// Solve p_prime at inner points
+	// Solve p_prime
 	// JacobiMethod();
 	// GaussSeidelMethod();
 	ImplicitMethod();
@@ -352,8 +352,23 @@ bool check_convergence(void)
 	return iter_cnt > MAX_ITER_NUM;
 }
 
-void solve(void)
+int main(int argc, char *argv[])
 {
+	cout << "mu=" << mu << endl;
+	cout << "dt=" << dt << endl;
+
+	// Init
+	for (int i = 1; i < Nx; ++i)
+		x[i] = L * i / (Nx - 1); // X-Coordinates
+	for (int j = 1; j < Ny; ++j)
+		y[j] = D * j / (Ny - 1); // Y-Coordinates
+
+	for (int i = 1; i <= Nx + 1; ++i)
+		u_star(i, Ny) = u(i, Ny) = Ue; // U at top
+	v(15, 5) = v_star(15, 5) = 0.5; // Initial peak to ensure 2D flow structure
+
+	// Solve
+	output(); // I.C.
 	bool converged = false;
 	while (!converged)
 	{
@@ -361,20 +376,9 @@ void solve(void)
 		cout << "Iter" << iter_cnt << ":" << endl;
 		SIMPLE();
 		t += dt;
-		write_result();
+		output();
 		converged = check_convergence();
 	}
-}
 
-void finalize(void)
-{
-	result.close();
-}
-
-int main(int argc, char *argv[])
-{
-	init();
-	solve();
-	finalize();
 	return 0;
 }
