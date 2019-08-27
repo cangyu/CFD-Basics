@@ -69,7 +69,7 @@ const int MAX_ITER_NUM = 2001;
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
 const double c = -dt / dydy;
-double d_min = numeric_limits<double>::max(), d_max = numeric_limits<double>::min();
+double d_min = numeric_limits<double>::max(), d_max = numeric_limits<double>::min(), d_15_5 = 0.0;
 
 const double alpha_p = 0.1;
 
@@ -77,7 +77,8 @@ Array2D p(Nx, Ny, 0.0), p_star(Nx, Ny, 0.0), p_prime(Nx, Ny, 0.0);
 Array2D u(Nx + 1, Ny, 0.0), u_star(Nx + 1, Ny, 0.0), u_prime(Nx + 1, Ny, 0.0);
 Array2D v(Nx + 2, Ny + 1, 0.0), v_star(Nx + 2, Ny + 1, 0.0), v_prime(Nx + 2, Ny + 1, 0.0);
 
-void output(void)
+// Full flowfield in TECPLOT ASCII Format.
+void output1(void)
 {
 	Array2D u_interp(Nx, Ny, 0.0);
 	for (int i = 1; i <= Nx; ++i)
@@ -124,6 +125,40 @@ void output(void)
 
 	// Finalize
 	result.close();
+}
+
+// Statistics at (15, 5) and i=15
+void output2(int iter)
+{
+	static const string fn("history_at_15_5.txt");
+
+	ofstream fout;
+	if (iter == 0)
+	{
+		fout.open(fn, ios::out);
+		if (!fout)
+			throw("Failed to open history file.");
+
+		for (int j = 0; j < Ny; ++j)
+			fout << setw(WIDTH) << setprecision(DIGITS) << y[j];
+		fout << endl;
+	}
+	else
+	{
+		fout.open(fn, ios::app);
+		if (!fout)
+			throw("Failed to open history file.");
+	}
+
+	for (int j = 1; j <= Ny; ++j)
+		fout << setw(WIDTH) << setprecision(DIGITS) << u(15, j);
+	fout << endl;
+	for (int j = 1; j <= Ny; ++j)
+		fout << setw(WIDTH) << setprecision(DIGITS) << v(15, j);
+	fout << endl;
+	fout << d_15_5 << endl;
+
+	fout.close();
 }
 
 // Jacobi method used to solve the elliptic equation iteratively.
@@ -214,6 +249,8 @@ void ImplicitMethod() // Can handle both Dirichlet and Neumann B.C.
 					d_max = d;
 				if (d < d_min)
 					d_min = d;
+				if (i == 15 && j == 5)
+					d_15_5 = d;
 
 				coef.push_back(T(id, id, a));
 				coef.push_back(T(id, id_w, b));
@@ -310,7 +347,11 @@ void SIMPLE(void)
 	// Correct u at inner nodes
 	for (int j = 2; j <= Ny - 1; ++j)
 		for (int i = 2; i <= Nx; ++i)
-			u(i, j) = u_star(i, j);
+		{
+			u_prime(i, j) = -dt / dx * (p_prime(i, j) - p_prime(i - 1, j)) / rho; // u_prime
+			u(i, j) = u_star(i, j) + u_prime(i, j);
+			//u(i, j) = u_star(i, j);
+		}
 
 	// Linear extrapolation of u at virtual nodes
 	for (int j = 2; j <= Ny - 1; ++j)
@@ -322,8 +363,12 @@ void SIMPLE(void)
 	// Correct v at inner nodes
 	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
-			v(i, j) = v_star(i, j);
-
+		{
+			v_prime(i, j) = -dt / dy * (p_prime(i-1, j) - p_prime(i-1, j - 1)) / rho; // v_prime
+			v(i, j) = v_star(i, j) + v_prime(i, j);
+			//v(i, j) = v_star(i, j);
+		}
+			
 	// Linear extrapolation of v at both top and bottom virtual nodes
 	// No-Penetration at both top and bottom
 	for (int i = 2; i <= Nx + 1; ++i)
@@ -394,7 +439,8 @@ int main(int argc, char *argv[])
 	v(15, 5) = v_star(15, 5) = 0.5; // Initial peak to ensure 2D flow structure
 
 	// Solve
-	output(); // I.C.
+	output1(); // I.C.
+	output2(0);
 	bool converged = false;
 	while (!converged)
 	{
@@ -402,7 +448,8 @@ int main(int argc, char *argv[])
 		cout << "Iter" << iter_cnt << ":" << endl;
 		SIMPLE();
 		t += dt;
-		output();
+		output1();
+		output2(iter_cnt);
 		converged = check_convergence();
 	}
 

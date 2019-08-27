@@ -77,6 +77,12 @@ Standard TECPLOT ASCII data files will be produced every time-step.
 Standard SIMPLE method is used to achieve final steady-state result.  
 The poisson equation is solved implicitly by solving a linear system.  
 
+Convergency history of mass flux at (15, 5):
+<div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/mass_flux.png"/></div>
+
+u at (15, 5) when iter=458:
+<div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/u.png"/></div>
+
 Values on __Boundary__:
 
 -|Left Inlet|Right Outlet|Top Lid|Bottom Wall
@@ -90,7 +96,8 @@ Values on __virtual__ nodes are mostly calculated by __linear extrapolation__ fr
 Usage:
 > * Compile: `g++ main.cc -I /usr/include/eigen3 -o Couette`
 > * Execute: `./Couette`
-> * Animate: `Tecplot` or `ParaView` or `EnSight`
+> * View full flowfield: `Tecplot` or `ParaView` or `EnSight`
+> * Animate convergency history at (15, 5): `python3 animate.py`
 
 Path of `Eigen3` may vary in different systems or platforms, plz adjust it accordingly.
 
