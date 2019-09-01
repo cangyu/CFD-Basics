@@ -80,7 +80,7 @@ The poisson equation is solved implicitly by solving a linear system.
 Convergency history of mass flux at (15, 5):
 <div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/mass_flux.png"/></div>
 
-u at (15, 5) when iter=458:
+__u__ at i=15:
 <div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/u.png"/></div>
 
 Values on __Boundary__:
