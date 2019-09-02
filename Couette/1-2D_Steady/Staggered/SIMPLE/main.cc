@@ -64,7 +64,7 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 2001;
+const int MAX_ITER_NUM = 1000;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
@@ -72,6 +72,9 @@ const double c = -dt / dydy;
 double d_min = numeric_limits<double>::max(), d_max = numeric_limits<double>::min(), d_15_5 = 0.0;
 
 const double alpha_p = 0.1;
+// const double alpha_uv = 0.0;
+// const double alpha_uv = 1.0 - alpha_p;
+const double alpha_uv = 1.0;
 
 Array2D p(Nx, Ny, 0.0), p_star(Nx, Ny, 0.0), p_prime(Nx, Ny, 0.0);
 Array2D u(Nx + 1, Ny, 0.0), u_star(Nx + 1, Ny, 0.0), u_prime(Nx + 1, Ny, 0.0);
@@ -177,6 +180,8 @@ void JacobiMethod()
 					d_max = d;
 				if (d < d_min)
 					d_min = d;
+				if (i == 15 && j == 5)
+					d_15_5 = d;
 
 				p_prime(i, j) = -(b * pp(i + 1, j) + b * pp(i - 1, j) + c * pp(i, j + 1) + c * pp(i, j - 1) + d) / a;
 			}
@@ -198,6 +203,8 @@ void GaussSeidelMethod()
 					d_max = d;
 				if (d < d_min)
 					d_min = d;
+				if (i == 15 && j == 5)
+					d_15_5 = d;
 
 				p_prime(i, j) = -(b * p_prime(i + 1, j) + b * p_prime(i - 1, j) + c * p_prime(i, j + 1) + c * p_prime(i, j - 1) + d) / a;
 			}
@@ -348,9 +355,8 @@ void SIMPLE(void)
 	for (int j = 2; j <= Ny - 1; ++j)
 		for (int i = 2; i <= Nx; ++i)
 		{
-			u_prime(i, j) = -dt / dx * (p_prime(i, j) - p_prime(i - 1, j)) / rho; // u_prime
-			u(i, j) = u_star(i, j) + u_prime(i, j);
-			//u(i, j) = u_star(i, j);
+			u_prime(i, j) = -dt / dx * (p_prime(i, j) - p_prime(i - 1, j)) / rho;
+			u(i, j) = u_star(i, j) + alpha_uv * u_prime(i, j);
 		}
 
 	// Linear extrapolation of u at virtual nodes
@@ -364,9 +370,8 @@ void SIMPLE(void)
 	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
-			v_prime(i, j) = -dt / dy * (p_prime(i-1, j) - p_prime(i-1, j - 1)) / rho; // v_prime
-			v(i, j) = v_star(i, j) + v_prime(i, j);
-			//v(i, j) = v_star(i, j);
+			v_prime(i, j) = -dt / dy * (p_prime(i-1, j) - p_prime(i-1, j - 1)) / rho;
+			v(i, j) = v_star(i, j) + alpha_uv * v_prime(i, j);
 		}
 			
 	// Linear extrapolation of v at both top and bottom virtual nodes
