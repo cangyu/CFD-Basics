@@ -71,6 +71,9 @@ Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are use
 #### (1.1) Staggered Grid
 Grid with virtual nodes is adopted as illustrated in `Chapter 8.4.1`.  
 Variable placement follows the convention introduced in `Chapter 6.8.4`.  
+
+<div align=center><img src="Couette/1-2D_Steady/Staggered/grid.png"/></div>
+
 Standard TECPLOT ASCII data files will be produced every time-step.
 
 ##### (1.1.1) SIMPLE
