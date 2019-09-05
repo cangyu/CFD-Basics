@@ -52,6 +52,7 @@ const size_t DIGITS = 7;
 const double L = 0.5; // m
 const double D = 0.01; // m
 const double Ue = 1.0; // m/s
+const double Pe = 0.0;
 const double rho = 1.225; // Kg/m3
 const double mu = 3.737e-5; // Kg/m/s
 
@@ -64,17 +65,14 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 2001;
+const int MAX_ITER_NUM = 2000;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
 const double c = -dt / dydy;
 double d_min = numeric_limits<double>::max(), d_max = numeric_limits<double>::min(), d_15_5 = 0.0;
 
-const double alpha_p = 0.1;
-const double P0 = 101325.0;
-
-Array2D p(Nx, Ny, P0), p_star(Nx, Ny, 0.0), p_prime(Nx, Ny, 0.0);
+Array2D p(Nx, Ny, Pe), p_star(Nx, Ny, Pe), p_prime(Nx, Ny, 0.0);
 Array2D u(Nx + 1, Ny, 0.0), u_wedge(Nx + 1, Ny, 0.0), u_star(Nx + 1, Ny, 0.0), u_prime(Nx + 1, Ny, 0.0);
 Array2D v(Nx + 2, Ny + 1, 0.0), v_wedge(Nx + 2, Ny + 1, 0.0), v_star(Nx + 2, Ny + 1, 0.0), v_prime(Nx + 2, Ny + 1, 0.0);
 
@@ -105,7 +103,7 @@ void output1(void)
 	// Create Tecplot data file.
 	ofstream result("flow" + to_string(iter_cnt) + ".dat");
 	if (!result)
-		throw("Failed to create datafile!");
+		throw("Failed to create data file!");
 
 	// Header
 	result << "TITLE = \"t=" << t << "\"" << endl;
@@ -162,6 +160,22 @@ void output2(int iter)
 	fout.close();
 }
 
+void init(void)
+{
+	cout << "mu=" << mu << endl;
+	cout << "dt=" << dt << endl;
+
+	// Init
+	for (int i = 1; i < Nx; ++i)
+		x[i] = L * i / (Nx - 1); // X-Coordinates
+	for (int j = 1; j < Ny; ++j)
+		y[j] = D * j / (Ny - 1); // Y-Coordinates
+
+	for (int i = 1; i <= Nx + 1; ++i)
+		u(i, Ny) = u_wedge(i, Ny) = u_star(i, Ny) = Ue; // U at top
+	v(15, 5) = v_wedge(15, 5) = v_star(15, 5) = 0.5; // Initial peak to ensure 2D flow structure
+}
+
 // Solve the pressure equation.
 void ImplicitMethod1()
 {
@@ -186,7 +200,7 @@ void ImplicitMethod1()
 			if (i == 0 || i == Nx - 1) // Inlet and Outlet
 			{
 				coef.push_back(T(id, id, 1.0));
-				rhs(id) = 0.0;
+				rhs(id) = Pe;
 			}
 			else if (j == 0) // Bottom
 			{
@@ -204,12 +218,6 @@ void ImplicitMethod1()
 			{
 				// Use 0-based interface
 				const double d = (rho*u_wedge.at(i + 1, j) - rho * u_wedge.at(i, j)) / dx + (rho*v_wedge.at(i + 1, j + 1) - rho * v_wedge.at(i + 1, j)) / dy;
-				if (d > d_max)
-					d_max = d;
-				if (d < d_min)
-					d_min = d;
-				if (i == 15 && j == 5)
-					d_15_5 = d;
 
 				coef.push_back(T(id, id, a));
 				coef.push_back(T(id, id_w, b));
@@ -227,28 +235,17 @@ void ImplicitMethod1()
 	Eigen::SimplicialCholesky<SpMat> chol(A);
 	Eigen::VectorXd x = chol.solve(rhs);
 
-	// Update p at inner
-	for (int i = 1; i < Nx - 1; ++i)
-		for (int j = 1; j < Ny - 1; ++j)
+	// Update p
+	for (int i = 0; i < Nx; ++i)
+		for (int j = 0; j < Ny; ++j)
 		{
 			const int id = j * Nx + i;
 			p.at(i, j) = x(id);
 		}
-
-	// Enforce B.C. of p: fixed at inlet and outlet, zero-gradient at top and bottom.
-	for (int j = 1; j <= Ny; ++j)
-	{
-		p_star(1, j) = P0;
-		p_star(Nx, j) = P0;
-	}
-	for (int i = 2; i <= Nx - 1; ++i)
-	{
-		p_star(i, 1) = p_star(i, 2);
-		p_star(i, Ny) = p_star(i, Ny - 1);
-	}
 }
 
-void ImplicitMethod2() // Can handle both Dirichlet and Neumann B.C.
+// Solve the pressure-correction equation
+void ImplicitMethod2()
 {
 	typedef Eigen::SparseMatrix<double> SpMat;
 	typedef Eigen::Triplet<double> T;
@@ -288,7 +285,7 @@ void ImplicitMethod2() // Can handle both Dirichlet and Neumann B.C.
 			else // Inner
 			{
 				// Use 0-based interface
-				const double d = (rho*u_prime.at(i + 1, j) - rho * u_prime.at(i, j)) / dx + (rho * v_prime.at(i + 1, j + 1) - rho * v_prime.at(i + 1, j)) / dy;
+				const double d = (rho*u_star.at(i + 1, j) - rho * u_star.at(i, j)) / dx + (rho * v_star.at(i + 1, j + 1) - rho * v_star.at(i + 1, j)) / dy;
 				if (d > d_max)
 					d_max = d;
 				if (d < d_min)
@@ -312,25 +309,13 @@ void ImplicitMethod2() // Can handle both Dirichlet and Neumann B.C.
 	Eigen::SimplicialCholesky<SpMat> chol(A);
 	Eigen::VectorXd x = chol.solve(rhs);
 
-	// Update p_prime at inner
-	for (int i = 1; i < Nx - 1; ++i)
-		for (int j = 1; j < Ny - 1; ++j)
+	// Update p_prime
+	for (int i = 0; i < Nx; ++i)
+		for (int j = 0; j < Ny; ++j)
 		{
 			const int id = j * Nx + i;
 			p_prime.at(i, j) = x(id);
 		}
-
-	// Enforce B.C. of p_prime: zero at inlet and outlet, zero-gradient at top and bottom.
-	for (int j = 1; j <= Ny; ++j)
-	{
-		p_prime(1, j) = 0.0;
-		p_prime(Nx, j) = 0.0;
-	}
-	for (int i = 2; i <= Nx - 1; ++i)
-	{
-		p_prime(i, 1) = p_prime(i, 2);
-		p_prime(i, Ny) = p_prime(i, Ny - 1);
-	}
 }
 
 void SIMPLER(void)
@@ -352,7 +337,7 @@ void SIMPLER(void)
 		}
 
 	// v_wedge at inner points
-	for (int i = 3; i <= Nx + 1; ++i)
+	for (int i = 3; i <= Nx; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
 			double u_bar1 = 0.5 *(u(i, j - 1) + u(i, j));
@@ -369,8 +354,11 @@ void SIMPLER(void)
 
 	// Solve p
 	ImplicitMethod1();
-	d_min = numeric_limits<double>::max();
-	d_max = numeric_limits<double>::min();
+
+	// Set p_star to p
+	for (int j = 1; j <= Ny; ++j)
+		for (int i = 1; i <= Nx; ++i)
+			p_star(i, j) = p(i, j);
 
 	// u_star at inner points
 	for (int j = 2; j <= Ny - 1; ++j)
@@ -404,6 +392,8 @@ void SIMPLER(void)
 			v_star(i, j) = (rho * v(i, j) + B * dt - dy / dy * (p_star(i - 1, j) - p_star(i - 1, j - 1))) / rho;
 		}
 
+	d_min = numeric_limits<double>::max();
+	d_max = numeric_limits<double>::min();
 	ImplicitMethod2();
 
 	// Correct u at inner nodes
@@ -411,8 +401,7 @@ void SIMPLER(void)
 		for (int i = 2; i <= Nx; ++i)
 		{
 			u_prime(i, j) = -dt / dx * (p_prime(i, j) - p_prime(i - 1, j)) / rho; // u_prime
-			u(i, j) = u_wedge(i, j) + u_prime(i, j);
-			//u(i, j) = u_wedge(i, j);
+			u(i, j) = u_star(i, j) + u_prime(i, j);
 		}
 
 	// Linear extrapolation of u at virtual nodes
@@ -427,8 +416,7 @@ void SIMPLER(void)
 		for (int j = 2; j <= Ny; ++j)
 		{
 			v_prime(i, j) = -dt / dy * (p_prime(i - 1, j) - p_prime(i - 1, j - 1)) / rho; // v_prime
-			v(i, j) = v_wedge(i, j) + v_prime(i, j);
-			//v(i, j) = v_wedge(i, j);
+			v(i, j) = v_star(i, j) + v_prime(i, j);
 		}
 
 	// Linear extrapolation of v at both top and bottom virtual nodes
@@ -485,35 +473,35 @@ bool check_convergence(void)
 	return iter_cnt > MAX_ITER_NUM || max(abs(d_max), abs(d_min)) < 1e-4;
 }
 
-int main(int argc, char *argv[])
+void loop(void)
 {
-	cout << "mu=" << mu << endl;
-	cout << "dt=" << dt << endl;
-
-	// Init
-	for (int i = 1; i < Nx; ++i)
-		x[i] = L * i / (Nx - 1); // X-Coordinates
-	for (int j = 1; j < Ny; ++j)
-		y[j] = D * j / (Ny - 1); // Y-Coordinates
-
-	for (int i = 1; i <= Nx + 1; ++i)
-		u(i, Ny) = u_wedge(i, Ny) = Ue; // U at top
-	v(15, 5) = v_wedge(15, 5) = 0.5; // Initial peak to ensure 2D flow structure
-
-	// Solve
-	output1(); // I.C.
-	output2(0);
 	bool converged = false;
 	while (!converged)
 	{
 		++iter_cnt;
 		cout << "Iter" << iter_cnt << ":" << endl;
+
 		SIMPLER();
 		t += dt;
+
 		output1();
 		output2(iter_cnt);
+
 		converged = check_convergence();
 	}
+}
+
+int main(int argc, char *argv[])
+{
+	// Initialize
+	init();
+
+	// Output I.C.
+	output1();
+	output2(0);
+
+	// Solve
+	loop();
 
 	return 0;
 }
