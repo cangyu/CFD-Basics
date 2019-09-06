@@ -97,14 +97,23 @@ v|0|by computation|0|0
 Values on __virtual__ nodes are mostly calculated by __linear extrapolation__ from neighbouring nodes.  
 
 Usage:
-> * Compile: `g++ main.cc -I /usr/include/eigen3 -o Couette`
+> * Compile: `g++ main.cc -std=c++14 -I /usr/include/eigen3 -o Couette`
 > * Execute: `./Couette`
 > * View full flowfield: `Tecplot` or `ParaView` or `EnSight`
 > * Animate convergency history at (15, 5): `python3 animate.py`
-
-Path of `Eigen3` may vary in different systems or platforms, plz adjust it accordingly.
+> * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
 
 ##### (1.1.2) SIMPLER
+It is similiar with __SIMPLE__ in general, but a better __p*__ is provided by calculating the pressure equation in advance within each iteration loop. 
+
+Usage:
+> * Compile: `g++ main.cc -std=c++14 -I /usr/include/eigen3 -o Couette`
+> * Execute: `./Couette`
+> * View full flowfield: `Tecplot` or `ParaView` or `EnSight`
+> * Animate convergency history at (15, 5): `python3 animate.py`
+> * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
+
+In my practice, __SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
 
 ##### (1.1.3) SIMPLEC
 
