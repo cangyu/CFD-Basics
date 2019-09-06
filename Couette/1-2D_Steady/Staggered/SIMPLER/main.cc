@@ -204,15 +204,21 @@ void ImplicitMethod1()
 			}
 			else if (j == 0) // Bottom
 			{
-				coef.push_back(T(id, id, 1.0));
-				coef.push_back(T(id, id_n, -1.0));
-				rhs(id) = 0.0;
+				coef.push_back(T(id, id_n, 1.0));
+				coef.push_back(T(id, id, -1.0));
+				const double ddvddx = 0.0;
+				//const double ddvddy = 4.0 / 3 * (v_wedge.at(i + 1, j + 2) - 3 * v_wedge.at(i + 1, j + 1)) / dydy; 
+				const double ddvddy = 0.0;
+				rhs(id) = mu * (ddvddx + ddvddy) * dy;
 			}
 			else if (j == Ny - 1) // Top
 			{
 				coef.push_back(T(id, id, 1.0));
 				coef.push_back(T(id, id_s, -1.0));
-				rhs(id) = 0.0;
+				const double ddvddx = 0.0;
+				//const double ddvddy = 4.0 / 3 * (v_wedge.at(i + 1, j - 1) - 3 * v_wedge.at(i + 1, j)) / dydy;
+				const double ddvddy = 0.0;
+				rhs(id) = mu * (ddvddx + ddvddy) * dy;
 			}
 			else // Inner
 			{
