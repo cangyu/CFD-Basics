@@ -64,7 +64,7 @@ The program will produce a flowfield history file named `flow.txt`, and the stea
 
 Be careful with the index inside the Thomas algorithm!
 
-### (1) 2D simulation (__Steady__)
+### (1) 2D simulation
 Pressure-Correction method in general.  
 Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are used on both __staggered__ and __colocated__ grids. 
 
@@ -72,7 +72,7 @@ Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are use
 Grid with virtual nodes is adopted as illustrated in `Chapter 8.4.1`.  
 Variable placement follows the convention introduced in `Chapter 6.8.4`.  
 
-<div align=center><img src="Couette/1-2D_Steady/Staggered/grid.png"/></div>
+<div align=center><img src="Couette/1-2D/Staggered/grid.png"/></div>
 
 Standard TECPLOT ASCII data files will be produced every time-step.
 
@@ -81,10 +81,10 @@ Standard SIMPLE method is used to achieve final steady-state result.
 The poisson equation is solved implicitly by solving a linear system.  
 
 Convergency history of mass flux at (15, 5):
-<div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/mass_flux.png"/></div>
+<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/mass_flux.png"/></div>
 
 __u__ at i=15:
-<div align=center><img src="Couette/1-2D_Steady/Staggered/SIMPLE/u.png"/></div>
+<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/u.png"/></div>
 
 Values on __Boundary__:
 
