@@ -119,9 +119,7 @@ Usage:
 
 __SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
 
-##### (1.1.3) SIMPLEC
-
-##### (1.1.4) PISO
+##### (1.1.3) PISO
 
 In my opinion, __PISO__ corrects pressure twice, while __SIMPLER__ predicts once and corrects once.  
 Convergency history:
