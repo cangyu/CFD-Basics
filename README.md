@@ -66,9 +66,7 @@ Be careful with the index inside the Thomas algorithm!
 
 ### (1) 2D simulation
 Pressure-Correction method in general.  
-Classical schemes like __SIMPLE__, __SIMPLER__, __SIMPLEC__ and __PISO__ are used on both __staggered__ and __colocated__ grids. 
-
-#### (1.1) Staggered Grid
+Classical schemes like __SIMPLE__, __SIMPLER__ and __PISO__ are used on __staggered__ grids.  
 Grid with virtual nodes is adopted as illustrated in `Chapter 8.4.1`.  
 Variable placement follows the convention introduced in `Chapter 6.8.4`.  
 
@@ -76,7 +74,7 @@ Variable placement follows the convention introduced in `Chapter 6.8.4`.
 
 Standard TECPLOT ASCII data files will be produced every time-step.
 
-##### (1.1.1) SIMPLE
+#### (1.1) SIMPLE
 Standard SIMPLE method is used to achieve final steady-state result.  
 The poisson equation is solved implicitly by solving a linear system.  
 Convergency history:
@@ -102,7 +100,7 @@ Usage:
 > * Animate convergency history at (15, 5): `python3 animate.py`
 > * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
 
-##### (1.1.2) SIMPLER
+#### (1.2) SIMPLER
 It is similiar with __SIMPLE__ in general, but a better __p*__ is provided by calculating the pressure equation in advance within each iteration loop.  
 Convergency history:
 
@@ -119,8 +117,7 @@ Usage:
 
 __SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
 
-##### (1.1.3) PISO
-
+#### (1.3) PISO
 In my opinion, __PISO__ corrects pressure twice, while __SIMPLER__ predicts once and corrects once.  
 Convergency history:
 
@@ -138,9 +135,5 @@ Usage:
 Pay attention to the B.C. of the pressure correction equation!  
 It seems unstable in the begining, may be improved if under-relaxation is used when updating pressure.
 
-#### (1.2) Colocated Grid
-The colocated grids tested include __pure tetrahedron__, __pure hexahedron__ and __mixed__. All these grids are accessed under ANSYS Fluent _(*.msh)_ format.
-
-
 ## Plate (Chapter9)
-Supersonic flow over a plate.
+Supersonic flow over a plate.  
