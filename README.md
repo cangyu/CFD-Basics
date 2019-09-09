@@ -103,7 +103,12 @@ Usage:
 > * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
 
 ##### (1.1.2) SIMPLER
-It is similiar with __SIMPLE__ in general, but a better __p*__ is provided by calculating the pressure equation in advance within each iteration loop. 
+It is similiar with __SIMPLE__ in general, but a better __p*__ is provided by calculating the pressure equation in advance within each iteration loop.  
+Convergency history:
+
+|<div align=center><img src="Couette/1-2D/Staggered/SIMPLER/u.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/SIMPLER/v.png"/></div>|
+|:-:|:-:|
+|__u__ at i=15 | __v__ at i=15|
 
 Usage:
 > * Compile: `g++ main.cc -std=c++14 -I /usr/include/eigen3 -o Couette`
@@ -112,7 +117,7 @@ Usage:
 > * Animate convergency history at (15, 5): `python3 animate.py`
 > * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
 
-In my practice, __SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
+__SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
 
 ##### (1.1.3) SIMPLEC
 
