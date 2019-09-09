@@ -65,7 +65,7 @@ vector<double> x(Nx, 0.0), y(Ny, 0.0);
 const double dt = 0.001;
 double t = 0.0;
 int iter_cnt = 0;
-const int MAX_ITER_NUM = 200;
+const int MAX_ITER_NUM = 2000;
 
 const double a = 2 * (dt / dxdx + dt / dydy);
 const double b = -dt / dxdx;
@@ -328,36 +328,61 @@ void PISO()
 		for (int i = 2; i <= Nx; ++i)
 		{
 			const double v_bar1 = 0.5*(v(i, j + 1) + v(i + 1, j + 1));
-            const double v_bar2 = 0.5*(v(i, j) + v(i + 1, j));
+			const double v_bar2 = 0.5*(v(i, j) + v(i + 1, j));
 
-            const double t11 = rho * pow(u(i + 1, j), 2) - rho * pow(u(i - 1, j), 2);
-            const double t12 = rho * u(i, j + 1)*v_bar1 - rho * u(i, j - 1)*v_bar2;
-            const double t21 = u(i + 1, j) - 2 * u(i, j) + u(i - 1, j);
-            const double t22 = u(i, j + 1) - 2 * u(i, j) + u(i, j - 1);
+			const double t11 = rho * pow(u(i + 1, j), 2) - rho * pow(u(i - 1, j), 2);
+			const double t12 = rho * u(i, j + 1)*v_bar1 - rho * u(i, j - 1)*v_bar2;
+			const double t21 = u(i + 1, j) - 2 * u(i, j) + u(i - 1, j);
+			const double t22 = u(i, j + 1) - 2 * u(i, j) + u(i, j - 1);
 			A(i, j) = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
 
-            const double dpdx = (p(i, j) - p(i - 1, j)) / dx;
+			const double dpdx = (p(i, j) - p(i - 1, j)) / dx;
 
-			u_star1(i, j) = u(i, j) + dt * (A(i, j) - dpdx) / rho;
+			u_star1(i, j) = (rho * u(i, j) + A(i, j) * dt - dt * dpdx) / rho;
 		}
+
+	// u* at boundary
+	for (int i = 1; i <= Nx + 1; ++i)
+	{
+		u_star1(i, 1) = 0.0;
+		u_star1(i, Ny) = Ue;
+	}
+	for (int j = 2; j <= Ny - 1; ++j)
+	{
+		u_star1(1, j) = 2 * u_star1(2, j) - u_star1(3, j);
+		u_star1(Nx + 1, j) = 2 * u_star1(Nx, j) - u_star1(Nx - 1, j);
+	}
 
 	// v* at inner points
-	for (int i = 3; i <= Nx; ++i)
+	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
-            const double u_bar1 = 0.5 *(u(i, j - 1) + u(i, j));
-            const double u_bar2 = 0.5 *(u(i - 1, j - 1) + u(i - 1, j));
+			const double u_bar1 = 0.5 *(u(i, j - 1) + u(i, j));
+			const double u_bar2 = 0.5 *(u(i - 1, j - 1) + u(i - 1, j));
 
-            const double t11 = rho * v(i + 1, j) * u_bar1 - rho * v(i - 1, j) * u_bar2;
-            const double t12 = rho * pow(v(i, j + 1), 2) - rho * pow(v(i, j - 1), 2);
-            const double t21 = v(i + 1, j) - 2 * v(i, j) + v(i - 1, j);
-            const double t22 = v(i, j + 1) - 2 * v(i, j) + v(i, j - 1);
+			const double t11 = rho * v(i + 1, j) * u_bar1 - rho * v(i - 1, j) * u_bar2;
+			const double t12 = rho * pow(v(i, j + 1), 2) - rho * pow(v(i, j - 1), 2);
+			const double t21 = v(i + 1, j) - 2 * v(i, j) + v(i - 1, j);
+			const double t22 = v(i, j + 1) - 2 * v(i, j) + v(i, j - 1);
 			B(i, j) = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
 
-            const double dpdy = (p(i - 1, j) - p(i - 1, j - 1)) / dy;
+			const double dpdy = (p(i - 1, j) - p(i - 1, j - 1)) / dy;
 
-			v_star1(i, j) = v(i, j) + dt * (B(i, j) - dpdy) / rho;
+			v_star1(i, j) = (rho * v(i, j) + B(i, j) * dt - dt * dpdy) / rho;
 		}
+
+	// v* at boundary
+	for (int j = 2; j <= Ny; ++j)
+	{
+		v_star1(2, j) = 0.0;
+		v_star1(1, j) = -v_star1(3, j);
+		v_star1(Nx + 2, j) = 2 * v_star1(Nx + 1, j) - v_star1(Nx, j);
+	}
+	for (int i = 1; i <= Nx + 2; ++i)
+	{
+		v_star1(i, 1) = -v_star1(i, 2);
+		v_star1(i, Ny + 1) = -v_star1(i, Ny);
+	}
 
 	/************************************************ Correction Step1 ************************************************/
 	// Solve (p* - p)
@@ -368,16 +393,41 @@ void PISO()
 		for (int i = 2; i <= Nx; ++i)
 		{
 			const double dpdx = (p_star1(i, j) - p_star1(i - 1, j)) / dx;
-			u_star2(i, j) = u(i, j) + dt * (A(i, j) - dpdx) / rho;
+			u_star2(i, j) = (rho * u(i, j) + A(i, j) * dt - dt * dpdx) / rho;
 		}
 
+	// u** at boundary
+	for (int i = 1; i <= Nx + 1; ++i)
+	{
+		u_star2(i, 1) = 0.0;
+		u_star2(i, Ny) = Ue;
+	}
+	for (int j = 2; j <= Ny - 1; ++j)
+	{
+		u_star2(1, j) = 2 * u_star2(2, j) - u_star2(3, j);
+		u_star2(Nx + 1, j) = 2 * u_star2(Nx, j) - u_star2(Nx - 1, j);
+	}
+
 	// v** at inner points
-	for (int i = 3; i <= Nx; ++i)
+	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
 			const double dpdy = (p_star1(i - 1, j) - p_star1(i - 1, j - 1)) / dy;
-			v_star2(i, j) = v(i, j) + dt * (B(i, j) - dpdy) / rho;
+			v_star2(i, j) = (rho * v(i, j) + B(i, j) * dt - dt * dpdy) / rho;
 		}
+
+	// v** at boundary
+	for (int j = 2; j <= Ny; ++j)
+	{
+		v_star2(2, j) = 0.0;
+		v_star2(1, j) = -v_star2(3, j);
+		v_star2(Nx + 2, j) = 2 * v_star2(Nx + 1, j) - v_star2(Nx, j);
+	}
+	for (int i = 1; i <= Nx + 2; ++i)
+	{
+		v_star2(i, 1) = -v_star2(i, 2);
+		v_star2(i, Ny + 1) = -v_star2(i, Ny);
+	}
 
 	/************************************************ Correction Step2 ************************************************/
 	// u**^ at inner points
@@ -387,10 +437,10 @@ void PISO()
 			const double v_bar1 = 0.5*(v_star1(i, j + 1) + v_star1(i + 1, j + 1));
 			const double v_bar2 = 0.5*(v_star1(i, j) + v_star1(i + 1, j));
 
-            const double t11 = rho * pow(u_star1(i + 1, j), 2) - rho * pow(u_star1(i - 1, j), 2);
-            const double t12 = rho * u_star1(i, j + 1)*v_bar1 - rho * u_star1(i, j - 1)*v_bar2;
-            const double t21 = u_star1(i + 1, j) - 2 * u_star1(i, j) + u_star1(i - 1, j);
-            const double t22 = u_star1(i, j + 1) - 2 * u_star1(i, j) + u_star1(i, j - 1);
+			const double t11 = rho * pow(u_star1(i + 1, j), 2) - rho * pow(u_star1(i - 1, j), 2);
+			const double t12 = rho * u_star1(i, j + 1)*v_bar1 - rho * u_star1(i, j - 1)*v_bar2;
+			const double t21 = u_star1(i + 1, j) - 2 * u_star1(i, j) + u_star1(i - 1, j);
+			const double t22 = u_star1(i, j + 1) - 2 * u_star1(i, j) + u_star1(i, j - 1);
 			A_star(i, j) = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
 
 			u_wedge(i, j) = (rho * u_star2(i, j) + (A_star(i, j) - A(i, j)) * dt) / rho;
@@ -400,14 +450,14 @@ void PISO()
 	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
-            const double u_bar1 = 0.5 *(u_star1(i, j - 1) + u_star1(i, j));
-            const double u_bar2 = 0.5 *(u_star1(i - 1, j - 1) + u_star1(i - 1, j));
+			const double u_bar1 = 0.5 *(u_star1(i, j - 1) + u_star1(i, j));
+			const double u_bar2 = 0.5 *(u_star1(i - 1, j - 1) + u_star1(i - 1, j));
 
-            const double t11 = rho * v_star1(i + 1, j) * u_bar1 - rho * v_star1(i - 1, j) * u_bar2;
-            const double t12 = rho * pow(v_star1(i, j + 1), 2) - rho * pow(v_star1(i, j - 1), 2);
-            const double t21 = v_star1(i + 1, j) - 2 * v_star1(i, j) + v_star1(i - 1, j);
-            const double t22 = v_star1(i, j + 1) - 2 * v_star1(i, j) + v_star1(i, j - 1);
-            B_star(i, j) = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
+			const double t11 = rho * v_star1(i + 1, j) * u_bar1 - rho * v_star1(i - 1, j) * u_bar2;
+			const double t12 = rho * pow(v_star1(i, j + 1), 2) - rho * pow(v_star1(i, j - 1), 2);
+			const double t21 = v_star1(i + 1, j) - 2 * v_star1(i, j) + v_star1(i - 1, j);
+			const double t22 = v_star1(i, j + 1) - 2 * v_star1(i, j) + v_star1(i, j - 1);
+			B_star(i, j) = -(t11 / dx2 + t12 / dy2) + mu * (t21 / dxdx + t22 / dydy);
 
 			v_wedge(i, j) = (rho * v_star2(i, j) + (B_star(i, j) - B(i, j)) * dt) / rho;
 		}
@@ -416,13 +466,13 @@ void PISO()
 	d_max = numeric_limits<double>::min();
 	ImplicitMethod2();
 
-    /************************************************* Update u and v *************************************************/
+	/************************************************* Update u and v *************************************************/
 	// Correct u at inner nodes
 	for (int j = 2; j <= Ny - 1; ++j)
 		for (int i = 2; i <= Nx; ++i)
 		{
-			const double u_prime = -dt / dx * (p_star2(i, j) - p_star2(i - 1, j)) / rho; // u_prime
-			u(i, j) = u_wedge(i, j) + u_prime;
+			const double dpdx = (p_star2(i, j) - p_star2(i - 1, j)) / dx;
+			u(i, j) = (rho * u_wedge(i, j) - dt * dpdx) / rho;
 		}
 
 	// Linear extrapolation of u at virtual nodes
@@ -436,21 +486,26 @@ void PISO()
 	for (int i = 3; i <= Nx + 1; ++i)
 		for (int j = 2; j <= Ny; ++j)
 		{
-			const double v_prime = -dt / dy * (p_star2(i - 1, j) - p_star2(i - 1, j - 1)) / rho; // v_prime
-			v(i, j) = v_wedge(i, j) + v_prime;
+			const double dpdy = (p_star2(i - 1, j) - p_star2(i - 1, j - 1)) / dy;
+			v(i, j) = (rho * v_wedge(i, j) - dt * dpdy) / rho;
 		}
+
+	// Linear extrapolation of v at right virtual nodes
+	for (int j = 2; j <= Ny; ++j)
+		v(Nx + 2, j) = 2 * v(Nx + 1, j) - v(Nx, j);
 
 	// Linear extrapolation of v at both top and bottom virtual nodes
 	// No-Penetration at both top and bottom
-	for (int i = 2; i <= Nx + 1; ++i)
+	for (int i = 1; i <= Nx + 2; ++i)
 	{
 		v(i, 1) = -v(i, 2);
 		v(i, Ny + 1) = -v(i, Ny);
 	}
 
-	// Linear extrapolation of v at right virtual nodes
-	for (int j = 2; j <= Ny; ++j)
-		v(Nx + 2, j) = 2 * v(Nx + 1, j) - v(Nx, j);
+	// Update p
+	for (int j = 1; j <= Ny; ++j)
+		for (int i = 1; i <= Nx; ++i)
+			p(i, j) = p_star2(i, j);
 }
 
 bool check_convergence()
