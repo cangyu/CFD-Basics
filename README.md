@@ -81,9 +81,9 @@ Standard SIMPLE method is used to achieve final steady-state result.
 The poisson equation is solved implicitly by solving a linear system.  
 Convergency history:
 
-<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/mass_flux.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/u.png"/></div>
-:-:|:-:
-mass flux at (15, 5)|__u__ at i=15
+|<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/mass_flux.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/u.png"/></div>|
+|:-:|:-:|
+|mass flux at (15, 5)|__u__ at i=15|
 
 Values on __Boundary__:
 
@@ -121,9 +121,9 @@ In my practice, __SIMPLER__ is much more stable than __SIMPLE__ in terms of the 
 In my opinion, __PISO__ corrects pressure twice, while __SIMPLER__ predicts once and corrects once.  
 Convergency history:
 
-<div align=center><img src="Couette/1-2D/Staggered/PISO/u.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/PISO/v.png"/></div>
-:-:|:-:
-__u__ at i=15 | __v__ at i=15
+|<div align=center><img src="Couette/1-2D/Staggered/PISO/u.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/PISO/v.png"/></div>|
+|:-:|:-:|
+|__u__ at i=15 | __v__ at i=15|
 
 Usage:
 > * Compile: `g++ main.cc -std=c++14 -I /usr/include/eigen3 -o Couette`
