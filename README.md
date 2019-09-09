@@ -79,12 +79,11 @@ Standard TECPLOT ASCII data files will be produced every time-step.
 ##### (1.1.1) SIMPLE
 Standard SIMPLE method is used to achieve final steady-state result.  
 The poisson equation is solved implicitly by solving a linear system.  
+Convergency history:
 
-Convergency history of mass flux at (15, 5):
-<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/mass_flux.png"/></div>
-
-__u__ at i=15:
-<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/u.png"/></div>
+<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/mass_flux.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/SIMPLE/u.png"/></div>
+:-:|:-:
+mass flux at (15, 5)|__u__ at i=15
 
 Values on __Boundary__:
 
@@ -118,6 +117,23 @@ In my practice, __SIMPLER__ is much more stable than __SIMPLE__ in terms of the 
 ##### (1.1.3) SIMPLEC
 
 ##### (1.1.4) PISO
+
+In my opinion, __PISO__ corrects pressure twice, while __SIMPLER__ predicts once and corrects once.  
+Convergency history:
+
+<div align=center><img src="Couette/1-2D/Staggered/PISO/u.png"/></div>|<div align=center><img src="Couette/1-2D/Staggered/PISO/v.png"/></div>
+:-:|:-:
+__u__ at i=15 | __v__ at i=15
+
+Usage:
+> * Compile: `g++ main.cc -std=c++14 -I /usr/include/eigen3 -o Couette`
+> * Execute: `./Couette`
+> * View full flowfield: `Tecplot` or `ParaView` or `EnSight`
+> * Animate convergency history at (15, 5): `python3 animate.py`
+> * Path of `Eigen3` may vary in different systems or platforms, adjust it accordingly.
+
+Pay attention to the B.C. of the pressure correction equation!  
+It seems unstable in the begining, may be improved if under-relaxation is used when updating pressure.
 
 #### (1.2) Colocated Grid
 The colocated grids tested include __pure tetrahedron__, __pure hexahedron__ and __mixed__. All these grids are accessed under ANSYS Fluent _(*.msh)_ format.
