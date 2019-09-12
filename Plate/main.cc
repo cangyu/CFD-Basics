@@ -1,6 +1,13 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <vector>
 #include <cmath>
+#include <algorithm>
+#include <cstddef>
+#include <cassert>
+#include <limits>
 
 using namespace std;
 
@@ -17,6 +24,8 @@ public:
 		m_Nx = nx;
 		m_Ny = ny;
 	}
+
+	~Array2D() = default;
 
 	// 0-based indexing
 	double& at(int i, int j)
@@ -51,6 +60,7 @@ const double Ma = 4.0;
 const double R = 287.0;
 const double Cv = 718.0;
 
+// Grid params
 const size_t IMIN = 1, IMAX = 70;
 const size_t JMIN = 1, JMAX = 70;
 const double dx = LHORI / (IMAX - 1);
@@ -211,12 +221,69 @@ void MacCormack()
 
 void write_tecplot(size_t n)
 {
+	// Output format params
+	static const size_t WIDTH = 16;
+	static const size_t DIGITS = 7;
 
+	// Create Tecplot data file.
+	ofstream result("flow" + to_string(n) + ".dat");
+	if (!result)
+		throw "Failed to create data file!";
+
+	// Header
+	result << R"(TITLE = "t=)" << t << R"(")" << endl;
+	result << R"(VARIABLES = "X", "Y", "rho", "U", "V", "P", "T")" << endl;
+	result << "ZONE I=" << IMAX << ", J=" << JMAX << ", F=POINT" << endl;
+
+	// Flowfield data
+	for (int j = 1; j <= JMAX; ++j)
+		for (int i = 1; i <= IMAX; ++i)
+		{
+			result << setw(WIDTH) << setprecision(DIGITS) << x[i - 1];
+			result << setw(WIDTH) << setprecision(DIGITS) << y[j - 1];
+			result << setw(WIDTH) << setprecision(DIGITS) << rho(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << u(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << v(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
+			result << endl;
+		}
+
+	// Finalize
+	result.close();
 }
 
 void write_user(size_t n)
 {
+	// Output format params
+	static const size_t WIDTH = 16;
+	static const size_t DIGITS = 7;
 
+	// Output file name
+	static const string fn("history.txt");
+
+	ofstream fout;
+	if (n == 0)
+	{
+		fout.open(fn, ios::out);
+		if (!fout)
+			throw "Failed to open history file.";
+
+		for (int i = 0; i < IMAX; ++j)
+			fout << setw(WIDTH) << setprecision(DIGITS) << x[i];
+		fout << endl;
+		for (int j = 0; j < JMAX; ++j)
+			fout << setw(WIDTH) << setprecision(DIGITS) << y[j];
+		fout << endl;
+	}
+	else
+	{
+		fout.open(fn, ios::app);
+		if (!fout)
+			throw "Failed to open history file.";
+	}
+
+	fout.close();
 }
 
 void output()
