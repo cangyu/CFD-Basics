@@ -46,7 +46,7 @@ Viscous flow between 2 parallel plate.
 ### (0) 1D simulation
 The simplified G.E. is given as:  
 
-<div align=center><img src="Couette/0-1D/eqn.png"/></div>
+<div align=center><img src="Couette/1D/eqn.png"/></div>
 
 it is similiar with unsteady heat transfer equation, which is __parabolic__.  
 Crank-Nicolson method is used, which is __unconditionally__ stable due to its implicitness. Hence, larger time-step can be taken via tuning the parameter `E`.  
@@ -60,7 +60,7 @@ Usage:
 
 The program will produce a flowfield history file named `flow.txt`, and the steady-state flowfield(with `E=1.0`) looks like:  
 
-<div align=center><img src="Couette/0-1D/steady.png"/></div>
+<div align=center><img src="Couette/1D/steady.png"/></div>
 
 Be careful with the index inside the Thomas algorithm!
 
@@ -70,7 +70,7 @@ Classical schemes like __SIMPLE__, __SIMPLER__ and __PISO__ are used on __stagge
 Grid with virtual nodes is adopted as illustrated in `Chapter 8.4.1`.  
 Variable placement follows the convention introduced in `Chapter 6.8.4`.  
 
-<div align=center><img src="Couette/1-2D/grid.png"/></div>
+<div align=center><img src="Couette/2D/grid.png"/></div>
 
 Standard TECPLOT ASCII data files will be produced every time-step.
 
@@ -79,7 +79,7 @@ Standard SIMPLE method is used to achieve final steady-state result.
 The poisson equation is solved implicitly by solving a linear system.  
 Convergency history:
 
-|<div align=center><img src="Couette/1-2D/SIMPLE/mass_flux.png"/></div>|<div align=center><img src="Couette/1-2D/SIMPLE/u.png"/></div>|
+|<div align=center><img src="Couette/2D/SIMPLE/mass_flux.png"/></div>|<div align=center><img src="Couette/2D/SIMPLE/u.png"/></div>|
 |:-:|:-:|
 |mass flux at (15, 5)|__u__ at i=15|
 
@@ -104,7 +104,7 @@ Usage:
 It is similiar with __SIMPLE__ in general, but a better __p*__ is provided by calculating the pressure equation in advance within each iteration loop.  
 Convergency history:
 
-|<div align=center><img src="Couette/1-2D/SIMPLER/u.png"/></div>|<div align=center><img src="Couette/1-2D/SIMPLER/v.png"/></div>|
+|<div align=center><img src="Couette/2D/SIMPLER/u.png"/></div>|<div align=center><img src="Couette/2D/SIMPLER/v.png"/></div>|
 |:-:|:-:|
 |__u__ at i=15 | __v__ at i=15|
 
@@ -121,7 +121,7 @@ __SIMPLER__ is much more stable than __SIMPLE__ in terms of the divergence term.
 In my opinion, __PISO__ corrects pressure twice, while __SIMPLER__ predicts once and corrects once.  
 Convergency history:
 
-|<div align=center><img src="Couette/1-2D/PISO/u.png"/></div>|<div align=center><img src="Couette/1-2D/PISO/v.png"/></div>|
+|<div align=center><img src="Couette/2D/PISO/u.png"/></div>|<div align=center><img src="Couette/2D/PISO/v.png"/></div>|
 |:-:|:-:|
 |__u__ at i=15 | __v__ at i=15|
 
