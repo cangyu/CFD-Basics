@@ -420,8 +420,6 @@ void MacCormack()
             const double K_bar = 0.5*(pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
             e_bar(i, j) = U5_bar(i, j) / U1_bar(i, j) - K_bar;
             T_bar(i, j) = e_bar(i, j) / Cv;
-            if(T_bar(i, j) < 0)
-                throw runtime_error("T_bar(" + to_string(i) + ", " + to_string(j) + ")=" + to_string(T_bar(i, j))+"K");
             p_bar(i, j) = rho_bar(i, j) * R * T_bar(i, j);
         }
 
@@ -433,11 +431,33 @@ void MacCormack()
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
         {
-            if(p_bar(i, j) < 0)
-                throw runtime_error("p_bar("+to_string(i)+", "+to_string(j)+")="+to_string(p_bar(i,j))+"Pa");
+			string msg("("+to_string(i)+", "+to_string(j)+"):");
+			bool flag = false;
 
-            if(T_bar(i,j) < 0)
-                throw runtime_error("T_bar("+to_string(i)+", "+to_string(j)+")="+to_string(T_bar(i,j))+"K");
+			if(rho_bar(i, j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string rho_msg(" rho_bar="+to_string(rho_bar(i,j)));
+				msg += rho_msg;
+			}
+			if(T_bar(i,j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string T_msg(" T_bar="+to_string(T_bar(i,j)));
+				msg += T_msg;
+            }
+			if(p_bar(i, j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string p_msg(" p_bar="+to_string(p_bar(i,j)));
+				msg += p_msg;
+			}
+            
+			if(flag)
+				throw runtime_error(msg);
         }
 
 	/*************************** Backward Difference **************************/
@@ -635,11 +655,33 @@ void MacCormack()
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
         {
-            if(p(i, j) < 0)
-                throw runtime_error("p("+to_string(i)+", "+to_string(j)+")="+to_string(p(i,j))+"Pa");
+			string msg("("+to_string(i)+", "+to_string(j)+"):");
+			bool flag = false;
 
-            if(T(i,j) < 0)
-                throw runtime_error("T("+to_string(i)+", "+to_string(j)+")="+to_string(T(i,j))+"K");
+			if(rho(i, j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string rho_msg(" rho="+to_string(rho(i,j)));
+				msg += rho_msg;
+			}
+			if(T(i,j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string T_msg(" T="+to_string(T(i,j)));
+				msg += T_msg;
+            }
+			if(p(i, j) < 0)
+			{
+				if(!flag)
+					flag = true;
+				string p_msg(" p="+to_string(p(i,j)));
+				msg += p_msg;
+			}
+            
+			if(flag)
+				throw runtime_error(msg);
         }
 
     // Physical properties
