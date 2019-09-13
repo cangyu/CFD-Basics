@@ -1,11 +1,9 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <iomanip>
 #include <vector>
 #include <cmath>
 #include <algorithm>
-#include <cstddef>
 #include <cassert>
 #include <limits>
 
@@ -73,7 +71,6 @@ const double dy = LVERT / (JMAX - 1);
 const double dy2 = 2.0 * dy, dydy = pow(dy, 2);
 vector<double> x(IMAX, 0.0), y(JMAX, 0.0);
 
-const double CFL = 0.7;
 double dt = 1e-5;
 double t = 0.0;
 
@@ -83,7 +80,7 @@ const size_t MAX_ITER = 2000;
 const double u_inf = Ma * a;
 const double v_inf = 0.0;
 const double p_inf = 101325.0;
-const double T_inf = 215.0;
+const double T_inf = 288.16;
 const double Tw = 1.0 * T_inf;
 
 // Primitive variables
@@ -94,19 +91,65 @@ Array2D p(IMAX, JMAX, 0.0);
 Array2D T(IMAX, JMAX, Tw);
 Array2D e(IMAX, JMAX, 0.0); // Internal energy per unit mass
 
+// Physical properties
+Array2D mu(IMAX, JMAX, 0.0); // Kg/(m*s)
+Array2D k(IMAX, JMAX, 0.0); // J/(s*m*K)
+Array2D lambda(IMAX, JMAX, 0.0); // Kg/(m*s)
+
 // Conservative variables
 Array2D U1(IMAX, JMAX, 0.0); // rho
 Array2D U2(IMAX, JMAX, 0.0); // rho u
 Array2D U3(IMAX, JMAX, 0.0); // rho v
 Array2D U5(IMAX, JMAX, 0.0); // rho(e+V^2 / 2)
 
+// X-derivatives
+Array2D E1(IMAX, JMAX, 0.0);
+Array2D E2(IMAX, JMAX, 0.0);
+Array2D E3(IMAX, JMAX, 0.0);
+Array2D E5(IMAX, JMAX, 0.0);
 
-double Sutherland(double T)
+// Y-derivatives
+Array2D F1(IMAX, JMAX, 0.0);
+Array2D F2(IMAX, JMAX, 0.0);
+Array2D F3(IMAX, JMAX, 0.0);
+Array2D F5(IMAX, JMAX, 0.0);
+
+// Temporal derivatives
+Array2D dU1dt(IMAX, JMAX, 0.0);
+Array2D dU2dt(IMAX, JMAX, 0.0);
+Array2D dU3dt(IMAX, JMAX, 0.0);
+Array2D dU5dt(IMAX, JMAX, 0.0);
+
+
+inline double Sutherland(double T)
 {
 	static const double mu0 = 1.7894e-5; // Kg/(m*s)
 	static const double T0 = 288.16; // K
 
+	if(T < 0)
+	    throw runtime_error("Invalid temperature: "+to_string(T) + "K");
+
 	return mu0 * pow(T / T0, 1.5) * (T0 + 110.0) / (T + 110.0);
+}
+
+double TimeStep()
+{
+    static const double CFL = 0.5;
+
+    double ret = numeric_limits<double>::max();
+
+    for(size_t j = JMIN; j <= JMAX; ++j)
+        for(size_t i= IMIN; i <= IMAX; ++i)
+        {
+            const double loc_nu = mu(i, j) / rho(i, j) * max(4.0/3, G0/Pr);
+            const double metric0 = 1.0 / dxdx + 1.0 / dydy;
+            const double metric1 = sqrt(metric0);
+            const double loc_C = sqrt(G0 * p(i, j) / rho(i, j));
+            const double loc_dt = 1.0/(abs(u(i, j))/dx + abs(v(i,j)) / dy + loc_C * metric1 + 2 * loc_nu * metric0);
+            ret = min(ret, loc_dt);
+        }
+
+    return CFL * ret;
 }
 
 inline bool at_boundary(size_t i, size_t j)
@@ -168,6 +211,16 @@ void set_boundary_values(Array2D &rho, Array2D &u, Array2D &v, Array2D &p, Array
             }
 }
 
+void update_physical_properties(Array2D &T, Array2D &mu, Array2D &k, Array2D &lambda)
+{
+    for (size_t j = JMIN; j <= JMAX; ++j)
+        for (size_t i = IMIN; i <= IMAX; ++i)
+        {
+            mu(i, j) = Sutherland(T(i, j));
+            k(i, j) = mu(i, j) * Cp / Pr;
+            lambda(i, j) = -2.0 / 3 * mu(i, j); // Follow Stokes's hypothesis
+        }
+}
 
 void init()
 {
@@ -203,28 +256,16 @@ void init()
 			const double K = 0.5*(pow(u(i, j), 2) + pow(v(i, j), 2));
 			U5(i, j) = rho(i, j)*(e(i, j) + K);
 		}
+
+    /************************** Physical Properties ***************************/
+    update_physical_properties(T, mu, k, lambda);
 }
 
 void MacCormack()
 {
 	/***************************** Forward Difference *************************/
-	Array2D mu(IMAX, JMAX, 0.0); // Kg/(m*s)
-	Array2D k(IMAX, JMAX, 0.0); // J/(s*m*K)
-	Array2D lambda(IMAX, JMAX, 0.0); // Kg/(m*s)
-	for (size_t j = 1; j <= JMAX; ++j)
-		for (size_t i = 1; i <= IMAX; ++i)
-		{
-			mu(i, j) = Sutherland(T(i, j));
-			k(i, j) = mu(i, j) * Cp / Pr;
-			lambda(i, j) = -2.0 / 3 * mu(i, j); // Follow Stokes's hypothesis
-		}
-
-	Array2D E1(IMAX, JMAX, 0.0);
-	Array2D E2(IMAX, JMAX, 0.0);
-	Array2D E3(IMAX, JMAX, 0.0);
-	Array2D E5(IMAX, JMAX, 0.0);
-	for (size_t j = 1; j <= JMAX; ++j)
-		for (size_t i = 1; i <= IMAX; ++i)
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Backward difference within E for x-derivatives
 			double dudx = 0.0;
@@ -277,12 +318,8 @@ void MacCormack()
 			E5(i, j) = (U5(i, j) + p(i, j)) * u(i, j) - u(i, j) * tau_xx - v(i, j) * tau_xy + q_x;
 		}
 
-	Array2D F1(IMAX, JMAX, 0.0);
-	Array2D F2(IMAX, JMAX, 0.0);
-	Array2D F3(IMAX, JMAX, 0.0);
-	Array2D F5(IMAX, JMAX, 0.0);
-	for (size_t j = 1; j <= JMAX; ++j)
-		for (size_t i = 1; i <= IMAX; ++i)
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Central difference within F for x-derivatives
 			double dudx = 0.0;
@@ -335,28 +372,24 @@ void MacCormack()
 			F5(i, j) = (U5(i, j) + p(i, j)) * v(i, j) - u(i, j) * tau_xy - v(i, j) * tau_yy + q_y;
 		}
 
-	Array2D dU1dt(IMAX, JMAX, 0.0);
-	Array2D dU2dt(IMAX, JMAX, 0.0);
-	Array2D dU3dt(IMAX, JMAX, 0.0);
-	Array2D dU5dt(IMAX, JMAX, 0.0);
-	for (int j = 2; j < JMAX; ++j)
-		for (int i = 2; i < IMAX; ++i)
+	for (int j = JMIN+1; j <= JMAX-1; ++j)
+		for (int i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			const double dE1dx = (E1(i + 1, j) - E1(i, j)) / dx;
 			const double dF1dy = (F1(i, j + 1) - F1(i, j)) / dy;
-			dU1dt(i, j) -= (dE1dx + dF1dy);
+			dU1dt(i, j) = -(dE1dx + dF1dy);
 
 			const double dE2dx = (E2(i + 1, j) - E2(i, j)) / dx;
 			const double dF2dy = (F2(i, j + 1) - F2(i, j)) / dy;
-			dU2dt(i, j) -= (dE2dx + dF2dy);
+			dU2dt(i, j) = -(dE2dx + dF2dy);
 
 			const double dE3dx = (E3(i + 1, j) - E3(i, j)) / dx;
 			const double dF3dy = (F3(i, j + 1) - F3(i, j)) / dy;
-			dU3dt(i, j) -= (dE3dx + dF3dy);
+			dU3dt(i, j) = -(dE3dx + dF3dy);
 
 			const double dE5dx = (E5(i + 1, j) - E5(i, j)) / dx;
 			const double dF5dy = (F5(i, j + 1) - F5(i, j)) / dy;
-			dU5dt(i, j) -= (dE5dx + dF5dy);
+			dU5dt(i, j) = -(dE5dx + dF5dy);
 		}
 
 	/******************************* Prediction *******************************/
@@ -400,13 +433,7 @@ void MacCormack()
 	Array2D mu_bar(IMAX, JMAX, 0.0);
 	Array2D k_bar(IMAX, JMAX, 0.0);
 	Array2D lambda_bar(IMAX, JMAX, 0.0);
-	for (size_t j = JMIN; j <= JMAX; ++j)
-		for (size_t i = IMIN; i <= IMAX; ++i)
-		{
-			mu_bar(i, j) = Sutherland(T_bar(i, j));
-			k_bar(i, j) = mu_bar(i, j) * Cp / Pr;
-			lambda_bar(i, j) = -2.0 / 3 * mu_bar(i, j); // Follow Stokes's hypothesis
-		}
+	update_physical_properties(T_bar, mu_bar, k_bar, lambda_bar);
 
 	Array2D E1_bar(IMAX, JMAX, 0.0);
 	Array2D E2_bar(IMAX, JMAX, 0.0);
@@ -588,6 +615,9 @@ void MacCormack()
 
 	// Primitive values at boundary
 	set_boundary_values(rho, u, v, p, T, e);
+
+    // Physical properties
+    update_physical_properties(T, mu, k, lambda);
 }
 
 void write_tecplot(size_t n)
@@ -603,7 +633,7 @@ void write_tecplot(size_t n)
 
 	// Header
 	result << R"(TITLE = "t=)" << t << R"(")" << endl;
-	result << R"(VARIABLES = "X", "Y", "rho", "U", "V", "P", "T")" << endl;
+	result << R"(VARIABLES = "X", "Y", "rho", "U", "V", "P", "T", "U1", "U2", "U3", "U5")" << endl;
 	result << "ZONE I=" << IMAX << ", J=" << JMAX << ", F=POINT" << endl;
 
 	// Flow-field data
@@ -616,7 +646,11 @@ void write_tecplot(size_t n)
 			result << setw(WIDTH) << setprecision(DIGITS) << u(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << v(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
-			result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
+            result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
+            result << setw(WIDTH) << setprecision(DIGITS) << U1(i, j);
+            result << setw(WIDTH) << setprecision(DIGITS) << U2(i, j);
+            result << setw(WIDTH) << setprecision(DIGITS) << U3(i, j);
+            result << setw(WIDTH) << setprecision(DIGITS) << U5(i, j);
 			result << endl;
 		}
 
@@ -675,10 +709,11 @@ void solve()
 	while (!converged)
 	{
 		++iter;
-		t += dt;
-		cout << "Iter: " << iter << " ..." << endl;
+		dt = TimeStep();
+		cout << "Iter" << iter << ": t=" << t <<"s, dt=" << dt << "s ..." << endl;
 		MacCormack();
-		output();
+        t += dt;
+        output();
 		converged = check_convergence();
 	}
 }
