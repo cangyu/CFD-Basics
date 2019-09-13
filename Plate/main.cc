@@ -102,32 +102,10 @@ Array2D U2(IMAX, JMAX, 0.0); // rho u
 Array2D U3(IMAX, JMAX, 0.0); // rho v
 Array2D U5(IMAX, JMAX, 0.0); // rho(e+V^2 / 2)
 
-// X-derivatives
-Array2D E1(IMAX, JMAX, 0.0);
-Array2D E2(IMAX, JMAX, 0.0);
-Array2D E3(IMAX, JMAX, 0.0);
-Array2D E5(IMAX, JMAX, 0.0);
-
-// Y-derivatives
-Array2D F1(IMAX, JMAX, 0.0);
-Array2D F2(IMAX, JMAX, 0.0);
-Array2D F3(IMAX, JMAX, 0.0);
-Array2D F5(IMAX, JMAX, 0.0);
-
-// Temporal derivatives
-Array2D dU1dt(IMAX, JMAX, 0.0);
-Array2D dU2dt(IMAX, JMAX, 0.0);
-Array2D dU3dt(IMAX, JMAX, 0.0);
-Array2D dU5dt(IMAX, JMAX, 0.0);
-
-
 inline double Sutherland(double T)
 {
 	static const double mu0 = 1.7894e-5; // Kg/(m*s)
 	static const double T0 = 288.16; // K
-
-	if(T < 0)
-	    throw runtime_error("Invalid temperature: "+to_string(T) + "K");
 
 	return mu0 * pow(T / T0, 1.5) * (T0 + 110.0) / (T + 110.0);
 }
@@ -135,13 +113,14 @@ inline double Sutherland(double T)
 double TimeStep()
 {
     static const double CFL = 0.5;
+	static const double nu_coef = max(4.0/3, G0/Pr);
 
     double ret = numeric_limits<double>::max();
 
     for(size_t j = JMIN; j <= JMAX; ++j)
         for(size_t i= IMIN; i <= IMAX; ++i)
         {
-            const double loc_nu = mu(i, j) / rho(i, j) * max(4.0/3, G0/Pr);
+            const double loc_nu = mu(i, j) / rho(i, j) * nu_coef;
             const double metric0 = 1.0 / dxdx + 1.0 / dydy;
             const double metric1 = sqrt(metric0);
             const double loc_C = sqrt(G0 * p(i, j) / rho(i, j));
@@ -232,6 +211,7 @@ void init()
 		y[j] = y[j - 1] + dy;
 
 	/********************************** I.C. **********************************/
+	// Inner
 	for (int j = JMIN+1; j <= JMAX-1; ++j)
 		for (int i = IMIN+1; i <= IMAX-1; ++i)
 		{
@@ -264,6 +244,12 @@ void init()
 void MacCormack()
 {
 	/***************************** Forward Difference *************************/
+	cout << "\tForward Difference...\n";
+	// X-derivatives
+	Array2D E1(IMAX, JMAX, 0.0);
+	Array2D E2(IMAX, JMAX, 0.0);
+	Array2D E3(IMAX, JMAX, 0.0);
+	Array2D E5(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -318,6 +304,11 @@ void MacCormack()
 			E5(i, j) = (U5(i, j) + p(i, j)) * u(i, j) - u(i, j) * tau_xx - v(i, j) * tau_xy + q_x;
 		}
 
+	// Y-derivatives
+	Array2D F1(IMAX, JMAX, 0.0);
+	Array2D F2(IMAX, JMAX, 0.0);
+	Array2D F3(IMAX, JMAX, 0.0);
+	Array2D F5(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -372,6 +363,11 @@ void MacCormack()
 			F5(i, j) = (U5(i, j) + p(i, j)) * v(i, j) - u(i, j) * tau_xy - v(i, j) * tau_yy + q_y;
 		}
 
+	// Temporal derivatives
+	Array2D dU1dt(IMAX, JMAX, 0.0);
+	Array2D dU2dt(IMAX, JMAX, 0.0);
+	Array2D dU3dt(IMAX, JMAX, 0.0);
+	Array2D dU5dt(IMAX, JMAX, 0.0);
 	for (int j = JMIN+1; j <= JMAX-1; ++j)
 		for (int i = IMIN+1; i <= IMAX-1; ++i)
 		{
@@ -393,6 +389,7 @@ void MacCormack()
 		}
 
 	/******************************* Prediction *******************************/
+	cout << "\tPrediction...\n";
 	Array2D U1_bar(IMAX, JMAX, 0.0);
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
@@ -423,13 +420,28 @@ void MacCormack()
             const double K_bar = 0.5*(pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
             e_bar(i, j) = U5_bar(i, j) / U1_bar(i, j) - K_bar;
             T_bar(i, j) = e_bar(i, j) / Cv;
+            if(T_bar(i, j) < 0)
+                throw runtime_error("T_bar(" + to_string(i) + ", " + to_string(j) + ")=" + to_string(T_bar(i, j))+"K");
             p_bar(i, j) = rho_bar(i, j) * R * T_bar(i, j);
         }
 
     // Update values at boundary
     set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
 
-	/****************************** Back Difference ***************************/
+    /********************************* Checking *******************************/
+    cout << "\tChecking predicted primitive values..." << endl;
+    for(size_t j=JMIN; j<=JMAX; ++j)
+        for(size_t i=IMIN; i<=IMAX; ++i)
+        {
+            if(p_bar(i, j) < 0)
+                throw runtime_error("p_bar("+to_string(i)+", "+to_string(j)+")="+to_string(p_bar(i,j))+"Pa");
+
+            if(T_bar(i,j) < 0)
+                throw runtime_error("T_bar("+to_string(i)+", "+to_string(j)+")="+to_string(T_bar(i,j))+"K");
+        }
+
+	/*************************** Backward Difference **************************/
+	cout << "\tBackward Difference..." << endl;
 	Array2D mu_bar(IMAX, JMAX, 0.0);
 	Array2D k_bar(IMAX, JMAX, 0.0);
 	Array2D lambda_bar(IMAX, JMAX, 0.0);
@@ -560,22 +572,23 @@ void MacCormack()
 		{
 			const double dE1dx = (E1_bar(i, j) - E1_bar(i - 1, j)) / dx;
 			const double dF1dy = (F1_bar(i, j) - F1_bar(i, j - 1)) / dy;
-			dU1dt_bar(i, j) -= (dE1dx + dF1dy);
+			dU1dt_bar(i, j) = -(dE1dx + dF1dy);
 
 			const double dE2dx = (E2_bar(i, j) - E2_bar(i - 1, j)) / dx;
 			const double dF2dy = (F2_bar(i, j) - F2_bar(i, j - 1)) / dy;
-			dU2dt_bar(i, j) -= (dE2dx + dF2dy);
+			dU2dt_bar(i, j) = -(dE2dx + dF2dy);
 
 			const double dE3dx = (E3_bar(i, j) - E3_bar(i - 1, j)) / dx;
 			const double dF3dy = (F3_bar(i, j) - F3_bar(i, j - 1)) / dy;
-			dU3dt_bar(i, j) -= (dE3dx + dF3dy);
+			dU3dt_bar(i, j) = -(dE3dx + dF3dy);
 
 			const double dE5dx = (E5_bar(i, j) - E5_bar(i - 1, j)) / dx;
 			const double dF5dy = (F5_bar(i, j) - F5_bar(i, j - 1)) / dy;
-			dU5dt_bar(i, j) -= (dE5dx + dF5dy);
+			dU5dt_bar(i, j) = -(dE5dx + dF5dy);
 		}
 
 	/********************************* Average ********************************/
+	cout << "\tAveraging derivatives..." << endl;
 	Array2D dU1dt_av(IMAX, JMAX, 0.0);
 	Array2D dU2dt_av(IMAX, JMAX, 0.0);
 	Array2D dU3dt_av(IMAX, JMAX, 0.0);
@@ -590,6 +603,7 @@ void MacCormack()
 		}
 
 	/********************************* Update *********************************/
+	cout << "\tUpdating both primitive and conservative values..." << endl;
 	// Conservative values at inner
 	for (int j = JMIN+1; j <= JMAX-1; ++j)
 		for (int i = IMIN+1; i <= IMAX-1; ++i)
@@ -615,6 +629,18 @@ void MacCormack()
 
 	// Primitive values at boundary
 	set_boundary_values(rho, u, v, p, T, e);
+
+    /********************************* Checking *******************************/
+    cout << "\tChecking updated primitive values..." << endl;
+    for(size_t j=JMIN; j<=JMAX; ++j)
+        for(size_t i=IMIN; i<=IMAX; ++i)
+        {
+            if(p(i, j) < 0)
+                throw runtime_error("p("+to_string(i)+", "+to_string(j)+")="+to_string(p(i,j))+"Pa");
+
+            if(T(i,j) < 0)
+                throw runtime_error("T("+to_string(i)+", "+to_string(j)+")="+to_string(T(i,j))+"K");
+        }
 
     // Physical properties
     update_physical_properties(T, mu, k, lambda);
@@ -709,9 +735,15 @@ void solve()
 	while (!converged)
 	{
 		++iter;
-		dt = TimeStep();
-		cout << "Iter" << iter << ": t=" << t <<"s, dt=" << dt << "s ..." << endl;
+        cout << "Iter" << iter << ":" << endl;
+
+        dt = TimeStep();
+        if(dt < 0)
+            throw runtime_error("dt="+to_string(dt)+"s");
+        cout << "\tt=" << t <<"s, dt=" << dt << "s" << endl;
+
 		MacCormack();
+
         t += dt;
         output();
 		converged = check_convergence();
