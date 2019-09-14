@@ -75,7 +75,7 @@ double dt = 1e-5;
 double t = 0.0;
 
 size_t iter = 0;
-const size_t MAX_ITER = 2000;
+const size_t MAX_ITER = 5000;
 
 const double u_inf = Ma * a;
 const double v_inf = 0.0;
@@ -416,6 +416,17 @@ void MacCormack()
 
     // Update values at boundary
     set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
+
+    for(size_t j=JMIN; j <= JMAX; ++j)
+        for(size_t i=IMIN; i <= IMAX; ++i)
+            if(at_boundary(i, j))
+            {
+                U1_bar(i, j) = rho_bar(i, j);
+                U2_bar(i, j) = rho_bar(i, j) * u_bar(i, j);
+                U3_bar(i, j) = rho_bar(i, j) * v_bar(i, j);
+                const double K = 0.5 * (pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
+                U5_bar(i, j) = rho_bar(i, j) * (e_bar(i, j) + K);
+            }
 
     /********************************* Checking *******************************/
     for(size_t j=JMIN; j<=JMAX; ++j)
