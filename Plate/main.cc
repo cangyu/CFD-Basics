@@ -26,25 +26,25 @@ public:
 	~Array2D() = default;
 
 	// 0-based indexing
-	double& at(int i, int j)
+	double& at(size_t i, size_t j)
 	{
-		int idx = i + m_Nx * j;
+		size_t idx = i + m_Nx * j;
 		return m_data[idx];
 	}
 
-	double at(int i, int j) const
+	double at(size_t i, size_t j) const
 	{
-		int idx = i + m_Nx * j;
+		size_t idx = i + m_Nx * j;
 		return m_data[idx];
 	}
 
 	// 1-based indexing
-	double& operator()(int i, int j)
+	double& operator()(size_t i, size_t j)
 	{
 		return at(i - 1, j - 1);
 	}
 
-	double operator()(int i, int j) const
+	double operator()(size_t i, size_t j) const
 	{
 		return at(i - 1, j - 1);
 	}
@@ -56,8 +56,8 @@ const double Pr = 0.71;
 const double a = 340.28; // m/s
 const double Ma = 4.0;
 const double R = 287.0; // J/(Kg*K)
-const double Cv = 718.0; // J/(Kg*K)
 const double G0 = 1.4;
+const double Cv = R/(G0-1); // J/(Kg*K)
 const double Cp = G0 * Cv; // J/(Kg*K)
 
 // Grid params
@@ -112,18 +112,18 @@ inline double Sutherland(double T)
 
 double TimeStep()
 {
-    static const double CFL = 0.5;
-	static const double nu_coef = max(4.0/3, G0/Pr);
+    static const double CFL = 0.1;
+	static const double nu_factor = max(4.0/3, G0/Pr);
 
     double ret = numeric_limits<double>::max();
 
-    for(size_t j = JMIN; j <= JMAX; ++j)
-        for(size_t i= IMIN; i <= IMAX; ++i)
+    for(size_t j = JMIN+1; j <= JMAX-1; ++j)
+        for(size_t i= IMIN+1; i <= IMAX-1; ++i)
         {
-            const double loc_nu = mu(i, j) / rho(i, j) * nu_coef;
+            const double loc_nu = mu(i, j) / rho(i, j) * nu_factor;
             const double metric0 = 1.0 / dxdx + 1.0 / dydy;
             const double metric1 = sqrt(metric0);
-            const double loc_C = sqrt(G0 * p(i, j) / rho(i, j));
+            const double loc_C = sqrt(G0 * R * T(i, j));
             const double loc_dt = 1.0/(abs(u(i, j))/dx + abs(v(i,j)) / dy + loc_C * metric1 + 2 * loc_nu * metric0);
             ret = min(ret, loc_dt);
         }
@@ -136,68 +136,68 @@ inline bool at_boundary(size_t i, size_t j)
     return i==IMIN || i==IMAX || j==JMIN || j==JMAX;
 }
 
-void set_boundary_values(Array2D &rho, Array2D &u, Array2D &v, Array2D &p, Array2D &T, Array2D &e)
+void set_boundary_values(Array2D &rho0, Array2D &u0, Array2D &v0, Array2D &p0, Array2D &T0, Array2D &e0)
 {
     // Front tip
-    u(IMIN, JMIN) = 0.0;
-    v(IMIN, JMIN) = 0.0;
-    p(IMIN, JMIN) = p_inf;
-    T(IMIN, JMIN) = T_inf;
+    u0(IMIN, JMIN) = 0.0;
+    v0(IMIN, JMIN) = 0.0;
+    p0(IMIN, JMIN) = p_inf;
+    T0(IMIN, JMIN) = T_inf;
 
     // Inlet
-    for (int j = JMIN+1; j <= JMAX; ++j)
+    for (size_t j = JMIN+1; j <= JMAX; ++j)
     {
-        u(IMIN, j) = u_inf;
-        v(IMIN, j) = 0.0;
-        p(IMIN, j) = p_inf;
-        T(IMIN, j) = T_inf;
+        u0(IMIN, j) = u_inf;
+        v0(IMIN, j) = 0.0;
+        p0(IMIN, j) = p_inf;
+        T0(IMIN, j) = T_inf;
     }
 
     // Top(Far)
-    for (int i = IMIN+1; i <= IMAX; ++i)
+    for (size_t i = IMIN+1; i <= IMAX; ++i)
     {
-        u(i, JMAX) = u_inf;
-        v(i, JMAX) = 0.0;
-        p(i, JMAX) = p_inf;
-        T(i, JMAX) = T_inf;
+        u0(i, JMAX) = u_inf;
+        v0(i, JMAX) = 0.0;
+        p0(i, JMAX) = p_inf;
+        T0(i, JMAX) = T_inf;
     }
 
     // Bottom
-    for (int i = IMIN+1; i <= IMAX; ++i)
+    for (size_t i = IMIN+1; i <= IMAX; ++i)
     {
-        u(i, JMIN) = 0.0;
-        v(i, JMIN) = 0.0;
-        p(i, JMIN) = 2 * p(i, JMIN+1) - p(i, JMIN+2);
-        T(i, JMIN) = Tw;
+        u0(i, JMIN) = 0.0;
+        v0(i, JMIN) = 0.0;
+        p0(i, JMIN) = 2 * p0(i, JMIN + 1) - p0(i, JMIN + 2);
+        T0(i, JMIN) = Tw;
     }
 
     // Outlet
-    for (int j = JMIN+1; j <= JMAX - 1; ++j)
+    for (size_t j = JMIN+1; j <= JMAX - 1; ++j)
     {
-        u(IMAX, j) = 2 * u(IMAX - 1, j) - u(IMAX - 2, j);
-        v(IMAX, j) = 2 * v(IMAX - 1, j) - v(IMAX - 2, j);
-        p(IMAX, j) = 2 * p(IMAX - 1, j) - p(IMAX - 2, j);
-        T(IMAX, j) = 2 * T(IMAX - 1, j) - T(IMAX - 2, j);
+        u0(IMAX, j) = 2 * u0(IMAX - 1, j) - u0(IMAX - 2, j);
+        v0(IMAX, j) = 2 * v0(IMAX - 1, j) - v0(IMAX - 2, j);
+        p0(IMAX, j) = 2 * p0(IMAX - 1, j) - p0(IMAX - 2, j);
+        T0(IMAX, j) = 2 * T0(IMAX - 1, j) - T0(IMAX - 2, j);
     }
 
     // Derived Variables
-    for (int j = JMIN; j <= JMAX; ++j)
-        for (int i = IMIN; i <= IMAX; ++i)
+    for (size_t j = JMIN; j <= JMAX; ++j)
+        for (size_t i = IMIN; i <= IMAX; ++i)
             if(at_boundary(i, j))
             {
-                rho(i, j) = p(i, j) / (R*T(i, j));
-                e(i, j) = Cv * T(i, j);
+                rho0(i, j) = p0(i, j) / (R * T0(i, j));
+                e0(i, j) = Cv * T0(i, j);
             }
 }
 
-void update_physical_properties(Array2D &T, Array2D &mu, Array2D &k, Array2D &lambda)
+void update_physical_properties(const Array2D &T0, Array2D &mu0, Array2D &k0, Array2D &lambda0)
 {
     for (size_t j = JMIN; j <= JMAX; ++j)
         for (size_t i = IMIN; i <= IMAX; ++i)
         {
-            mu(i, j) = Sutherland(T(i, j));
-            k(i, j) = mu(i, j) * Cp / Pr;
-            lambda(i, j) = -2.0 / 3 * mu(i, j); // Follow Stokes's hypothesis
+            mu0(i, j) = Sutherland(T0(i, j));
+            k0(i, j) = mu0(i, j) * Cp / Pr;
+            lambda0(i, j) = -2.0 / 3 * mu0(i, j); // Follow Stokes's hypothesis
         }
 }
 
@@ -212,8 +212,8 @@ void init()
 
 	/********************************** I.C. **********************************/
 	// Inner
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			u(i, j) = u_inf;
 			v(i, j) = v_inf;
@@ -227,8 +227,8 @@ void init()
     set_boundary_values(rho, u, v, p, T, e);
 
 	/************************ Conservative Variables **************************/
-	for (int j = JMIN; j <= JMAX; ++j)
-		for (int i = IMIN; i <= IMAX; ++i)
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			U1(i, j) = rho(i, j);
 			U2(i, j) = rho(i, j)*u(i, j);
@@ -368,8 +368,8 @@ void MacCormack()
 	Array2D dU2dt(IMAX, JMAX, 0.0);
 	Array2D dU3dt(IMAX, JMAX, 0.0);
 	Array2D dU5dt(IMAX, JMAX, 0.0);
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			const double dE1dx = (E1(i + 1, j) - E1(i, j)) / dx;
 			const double dF1dy = (F1(i, j + 1) - F1(i, j)) / dy;
@@ -394,8 +394,8 @@ void MacCormack()
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
 	Array2D U5_bar(IMAX, JMAX, 0.0);
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			U1_bar(i, j) = U1(i, j) + dU1dt(i, j) * dt;
 			U2_bar(i, j) = U2(i, j) + dU2dt(i, j) * dt;
@@ -411,8 +411,8 @@ void MacCormack()
     Array2D e_bar(IMAX, JMAX, 0.0);
 
     // Update values at inner
-    for (int j = JMIN+1; j <= JMAX-1; ++j)
-        for (int i = IMIN+1; i <= IMAX-1; ++i)
+    for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+        for (size_t i = IMIN+1; i <= IMAX-1; ++i)
         {
             rho_bar(i, j) = U1_bar(i, j);
             u_bar(i, j) = U2_bar(i, j) / U1_bar(i, j);
@@ -431,7 +431,7 @@ void MacCormack()
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
         {
-			string msg("("+to_string(i)+", "+to_string(j)+"):");
+			string msg("\n("+to_string(i)+", "+to_string(j)+"):");
 			bool flag = false;
 
 			if(rho_bar(i, j) < 0)
@@ -655,7 +655,7 @@ void MacCormack()
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
         {
-			string msg("("+to_string(i)+", "+to_string(j)+"):");
+			string msg("\n("+to_string(i)+", "+to_string(j)+"):");
 			bool flag = false;
 
 			if(rho(i, j) < 0)
