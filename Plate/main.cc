@@ -16,8 +16,7 @@ private:
 	size_t m_Nx, m_Ny;
 
 public:
-	Array2D(size_t nx, size_t ny, double val = 0.0) :
-		m_data(nx*ny, val)
+	Array2D(size_t nx, size_t ny, double val = 0.0) : m_data(nx * ny, val)
 	{
 		m_Nx = nx;
 		m_Ny = ny;
@@ -26,7 +25,7 @@ public:
 	~Array2D() = default;
 
 	// 0-based indexing
-	double& at(size_t i, size_t j)
+	double &at(size_t i, size_t j)
 	{
 		size_t idx = i + m_Nx * j;
 		return m_data[idx];
@@ -39,7 +38,7 @@ public:
 	}
 
 	// 1-based indexing
-	double& operator()(size_t i, size_t j)
+	double &operator()(size_t i, size_t j)
 	{
 		return at(i - 1, j - 1);
 	}
@@ -57,8 +56,8 @@ const double a = 340.28; // m/s
 const double Ma = 4.0;
 const double R = 287.0; // J/(Kg*K)
 const double G0 = 1.4;
-const double Cv = R/(G0-1); // J/(Kg*K)
-const double Cp = G0 * Cv; // J/(Kg*K)
+const double Cv = R / (G0 - 1); // J/(Kg*K)
+const double Cp = G0 * Cv;		// J/(Kg*K)
 
 // Grid params
 const size_t IMIN = 1, IMAX = 70;
@@ -92,8 +91,8 @@ Array2D T(IMAX, JMAX, Tw);
 Array2D e(IMAX, JMAX, 0.0); // Internal energy per unit mass
 
 // Physical properties
-Array2D mu(IMAX, JMAX, 0.0); // Kg/(m*s)
-Array2D k(IMAX, JMAX, 0.0); // J/(s*m*K)
+Array2D mu(IMAX, JMAX, 0.0);	 // Kg/(m*s)
+Array2D k(IMAX, JMAX, 0.0);		 // J/(s*m*K)
 Array2D lambda(IMAX, JMAX, 0.0); // Kg/(m*s)
 
 // Conservative variables
@@ -105,100 +104,100 @@ Array2D U5(IMAX, JMAX, 0.0); // rho(e+V^2 / 2)
 inline double Sutherland(double T)
 {
 	static const double mu0 = 1.7894e-5; // Kg/(m*s)
-	static const double T0 = 288.16; // K
+	static const double T0 = 288.16;	 // K
 
 	return mu0 * pow(T / T0, 1.5) * (T0 + 110.0) / (T + 110.0);
 }
 
 double TimeStep()
 {
-    static const double CFL = 0.1;
-	static const double nu_factor = max(4.0/3, G0/Pr);
+	static const double CFL = 0.5;
+	static const double nu_factor = max(4.0 / 3, G0 / Pr);
 
-    double ret = numeric_limits<double>::max();
+	double ret = numeric_limits<double>::max();
 
-    for(size_t j = JMIN+1; j <= JMAX-1; ++j)
-        for(size_t i= IMIN+1; i <= IMAX-1; ++i)
-        {
-            const double loc_nu = mu(i, j) / rho(i, j) * nu_factor;
-            const double metric0 = 1.0 / dxdx + 1.0 / dydy;
-            const double metric1 = sqrt(metric0);
-            const double loc_C = sqrt(G0 * R * T(i, j));
-            const double loc_dt = 1.0/(abs(u(i, j))/dx + abs(v(i,j)) / dy + loc_C * metric1 + 2 * loc_nu * metric0);
-            ret = min(ret, loc_dt);
-        }
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
+		{
+			const double loc_nu = mu(i, j) / rho(i, j) * nu_factor;
+			const double metric0 = 1.0 / dxdx + 1.0 / dydy;
+			const double metric1 = sqrt(metric0);
+			const double loc_C = sqrt(G0 * R * T(i, j));
+			const double loc_dt = 1.0 / (abs(u(i, j)) / dx + abs(v(i, j)) / dy + loc_C * metric1 + 2 * loc_nu * metric0);
+			ret = min(ret, loc_dt);
+		}
 
-    return CFL * ret;
+	return CFL * ret;
 }
 
 inline bool at_boundary(size_t i, size_t j)
 {
-    return i==IMIN || i==IMAX || j==JMIN || j==JMAX;
+	return i == IMIN || i == IMAX || j == JMIN || j == JMAX;
 }
 
 void set_boundary_values(Array2D &rho0, Array2D &u0, Array2D &v0, Array2D &p0, Array2D &T0, Array2D &e0)
 {
-    // Front tip
-    u0(IMIN, JMIN) = 0.0;
-    v0(IMIN, JMIN) = 0.0;
-    p0(IMIN, JMIN) = p_inf;
-    T0(IMIN, JMIN) = T_inf;
+	// Front tip
+	u0(IMIN, JMIN) = 0.0;
+	v0(IMIN, JMIN) = 0.0;
+	p0(IMIN, JMIN) = p_inf;
+	T0(IMIN, JMIN) = T_inf;
 
-    // Inlet
-    for (size_t j = JMIN+1; j <= JMAX; ++j)
-    {
-        u0(IMIN, j) = u_inf;
-        v0(IMIN, j) = 0.0;
-        p0(IMIN, j) = p_inf;
-        T0(IMIN, j) = T_inf;
-    }
+	// Inlet
+	for (size_t j = JMIN + 1; j <= JMAX; ++j)
+	{
+		u0(IMIN, j) = u_inf;
+		v0(IMIN, j) = 0.0;
+		p0(IMIN, j) = p_inf;
+		T0(IMIN, j) = T_inf;
+	}
 
-    // Top(Far)
-    for (size_t i = IMIN+1; i <= IMAX; ++i)
-    {
-        u0(i, JMAX) = u_inf;
-        v0(i, JMAX) = 0.0;
-        p0(i, JMAX) = p_inf;
-        T0(i, JMAX) = T_inf;
-    }
+	// Top(Far)
+	for (size_t i = IMIN + 1; i <= IMAX; ++i)
+	{
+		u0(i, JMAX) = u_inf;
+		v0(i, JMAX) = 0.0;
+		p0(i, JMAX) = p_inf;
+		T0(i, JMAX) = T_inf;
+	}
 
-    // Bottom
-    for (size_t i = IMIN+1; i <= IMAX; ++i)
-    {
-        u0(i, JMIN) = 0.0;
-        v0(i, JMIN) = 0.0;
-        p0(i, JMIN) = 2 * p0(i, JMIN + 1) - p0(i, JMIN + 2);
-        T0(i, JMIN) = Tw;
-    }
+	// Bottom
+	for (size_t i = IMIN + 1; i <= IMAX; ++i)
+	{
+		u0(i, JMIN) = 0.0;
+		v0(i, JMIN) = 0.0;
+		p0(i, JMIN) = 2 * p0(i, JMIN + 1) - p0(i, JMIN + 2);
+		T0(i, JMIN) = Tw;
+	}
 
-    // Outlet
-    for (size_t j = JMIN+1; j <= JMAX - 1; ++j)
-    {
-        u0(IMAX, j) = 2 * u0(IMAX - 1, j) - u0(IMAX - 2, j);
-        v0(IMAX, j) = 2 * v0(IMAX - 1, j) - v0(IMAX - 2, j);
-        p0(IMAX, j) = 2 * p0(IMAX - 1, j) - p0(IMAX - 2, j);
-        T0(IMAX, j) = 2 * T0(IMAX - 1, j) - T0(IMAX - 2, j);
-    }
+	// Outlet
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+	{
+		u0(IMAX, j) = 2 * u0(IMAX - 1, j) - u0(IMAX - 2, j);
+		v0(IMAX, j) = 2 * v0(IMAX - 1, j) - v0(IMAX - 2, j);
+		p0(IMAX, j) = 2 * p0(IMAX - 1, j) - p0(IMAX - 2, j);
+		T0(IMAX, j) = 2 * T0(IMAX - 1, j) - T0(IMAX - 2, j);
+	}
 
-    // Derived Variables
-    for (size_t j = JMIN; j <= JMAX; ++j)
-        for (size_t i = IMIN; i <= IMAX; ++i)
-            if(at_boundary(i, j))
-            {
-                rho0(i, j) = p0(i, j) / (R * T0(i, j));
-                e0(i, j) = Cv * T0(i, j);
-            }
+	// Derived Variables
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+			if (at_boundary(i, j))
+			{
+				rho0(i, j) = p0(i, j) / (R * T0(i, j));
+				e0(i, j) = Cv * T0(i, j);
+			}
 }
 
 void update_physical_properties(const Array2D &T0, Array2D &mu0, Array2D &k0, Array2D &lambda0)
 {
-    for (size_t j = JMIN; j <= JMAX; ++j)
-        for (size_t i = IMIN; i <= IMAX; ++i)
-        {
-            mu0(i, j) = Sutherland(T0(i, j));
-            k0(i, j) = mu0(i, j) * Cp / Pr;
-            lambda0(i, j) = -2.0 / 3 * mu0(i, j); // Follow Stokes's hypothesis
-        }
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+		{
+			mu0(i, j) = Sutherland(T0(i, j));
+			k0(i, j) = mu0(i, j) * Cp / Pr;
+			lambda0(i, j) = -2.0 / 3 * mu0(i, j); // Follow Stokes's hypothesis
+		}
 }
 
 void init()
@@ -214,33 +213,33 @@ void init()
 
 	/********************************** I.C. **********************************/
 	// Inner
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			u(i, j) = u_inf;
 			v(i, j) = v_inf;
 			p(i, j) = p_inf;
 			T(i, j) = T_inf;
-            rho(i, j) = p(i, j) / (R*T(i, j));
-            e(i, j) = Cv * T(i, j);
+			rho(i, j) = p(i, j) / (R * T(i, j));
+			e(i, j) = Cv * T(i, j);
 		}
 
 	/********************************** B.C. **********************************/
-    set_boundary_values(rho, u, v, p, T, e);
+	set_boundary_values(rho, u, v, p, T, e);
 
 	/************************ Conservative Variables **************************/
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			U1(i, j) = rho(i, j);
-			U2(i, j) = rho(i, j)*u(i, j);
-			U3(i, j) = rho(i, j)*v(i, j);
-			const double K = 0.5*(pow(u(i, j), 2) + pow(v(i, j), 2));
-			U5(i, j) = rho(i, j)*(e(i, j) + K);
+			U2(i, j) = rho(i, j) * u(i, j);
+			U3(i, j) = rho(i, j) * v(i, j);
+			const double K = 0.5 * (pow(u(i, j), 2) + pow(v(i, j), 2));
+			U5(i, j) = rho(i, j) * (e(i, j) + K);
 		}
 
-    /************************** Physical Properties ***************************/
-    update_physical_properties(T, mu, k, lambda);
+	/************************** Physical Properties ***************************/
+	update_physical_properties(T, mu, k, lambda);
 }
 
 void MacCormack()
@@ -256,35 +255,35 @@ void MacCormack()
 			// Backward difference within E for x-derivatives
 			double dudx = 0.0, dvdx = 0.0, dTdx = 0.0;
 			if (i == IMIN)
-            {
+			{
 				dudx = (u(i + 1, j) - u(i, j)) / dx;
-                dvdx = (v(i + 1, j) - v(i, j)) / dx;
-                dTdx = (T(i + 1, j) - T(i, j)) / dx;
-            }
+				dvdx = (v(i + 1, j) - v(i, j)) / dx;
+				dTdx = (T(i + 1, j) - T(i, j)) / dx;
+			}
 			else
-            {
-			    dudx = (u(i, j) - u(i - 1, j)) / dx;
-                dvdx = (v(i, j) - v(i - 1, j)) / dx;
-                dTdx = (T(i, j) - T(i - 1, j)) / dx;
-            }
+			{
+				dudx = (u(i, j) - u(i - 1, j)) / dx;
+				dvdx = (v(i, j) - v(i - 1, j)) / dx;
+				dTdx = (T(i, j) - T(i - 1, j)) / dx;
+			}
 
 			// Central difference within E for y-derivatives
 			double dudy = 0.0, dvdy = 0.0;
 			if (j == JMIN)
 			{
 				dudy = (u(i, j + 2) - 4 * u(i, j + 1) + 3 * u(i, j)) / (-dy2);
-                dvdy = (v(i, j + 1) - v(i, j)) / dy;
-            }
+				dvdy = (v(i, j + 1) - v(i, j)) / dy;
+			}
 			else if (j == JMAX)
-            {
+			{
 				dudy = (u(i, j) - u(i, j - 1)) / dy;
-                dvdy = (v(i, j) - v(i, j - 1)) / dy;
-            }
+				dvdy = (v(i, j) - v(i, j - 1)) / dy;
+			}
 			else
-            {
+			{
 				dudy = (u(i, j + 1) - u(i, j - 1)) / dy2;
-                dvdy = (v(i, j + 1) - v(i, j - 1)) / dy2;
-            }
+				dvdy = (v(i, j + 1) - v(i, j - 1)) / dy2;
+			}
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -295,9 +294,9 @@ void MacCormack()
 			const double q_x = -k(i, j) * dTdx;
 
 			// Elements of E
-			E1(i, j) = rho(i, j)*u(i, j);
-			E2(i, j) = rho(i, j)*pow(u(i, j), 2) + p(i, j) - tau_xx;
-			E3(i, j) = rho(i, j)*u(i, j)*v(i, j) - tau_xy;
+			E1(i, j) = rho(i, j) * u(i, j);
+			E2(i, j) = rho(i, j) * pow(u(i, j), 2) + p(i, j) - tau_xx;
+			E3(i, j) = rho(i, j) * u(i, j) * v(i, j) - tau_xy;
 			E5(i, j) = (U5(i, j) + p(i, j)) * u(i, j) - u(i, j) * tau_xx - v(i, j) * tau_xy + q_x;
 		}
 
@@ -311,35 +310,35 @@ void MacCormack()
 			// Central difference within F for x-derivatives
 			double dudx = 0.0, dvdx = 0.0;
 			if (i == IMIN)
-            {
+			{
 				dudx = (u(i + 1, j) - u(i, j)) / dx;
-                dvdx = (v(i + 1, j) - v(i, j)) / dx;
-            }
+				dvdx = (v(i + 1, j) - v(i, j)) / dx;
+			}
 			else if (i == IMAX)
-            {
+			{
 				dudx = (u(i, j) - u(i - 1, j)) / dx;
-                dvdx = (v(i, j) - v(i - 1, j)) / dx;
-            }
+				dvdx = (v(i, j) - v(i - 1, j)) / dx;
+			}
 			else
-            {
+			{
 				dudx = (u(i + 1, j) - u(i - 1, j)) / dx2;
-                dvdx = (v(i + 1, j) - v(i - 1, j)) / dx2;
-            }
+				dvdx = (v(i + 1, j) - v(i - 1, j)) / dx2;
+			}
 
 			// Backward difference within F for y-derivatives
 			double dudy = 0.0, dvdy = 0.0, dTdy = 0.0;
 			if (j == JMIN)
-            {
+			{
 				dudy = (u(i, j + 2) - 4 * u(i, j + 1) + 3 * u(i, j)) / (-dy2);
-                dvdy = (v(i, j + 1) - v(i, j)) / dy;
-                dTdy = (T(i, j + 1) - T(i, j)) / dy;
-            }
+				dvdy = (v(i, j + 1) - v(i, j)) / dy;
+				dTdy = (T(i, j + 1) - T(i, j)) / dy;
+			}
 			else
-            {
-			    dudy = (u(i, j) - u(i, j - 1)) / dy;
-                dvdy = (v(i, j) - v(i, j - 1)) / dy;
-                dTdy = (T(i, j) - T(i, j - 1)) / dy;
-            }
+			{
+				dudy = (u(i, j) - u(i, j - 1)) / dy;
+				dvdy = (v(i, j) - v(i, j - 1)) / dy;
+				dTdy = (T(i, j) - T(i, j - 1)) / dy;
+			}
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -350,9 +349,9 @@ void MacCormack()
 			const double q_y = -k(i, j) * dTdy;
 
 			// Elements of F
-			F1(i, j) = rho(i, j)*v(i, j);
-			F2(i, j) = rho(i, j)*u(i, j)*v(i, j) - tau_xy;
-			F3(i, j) = rho(i, j)*pow(v(i, j), 2) + p(i, j) - tau_yy;
+			F1(i, j) = rho(i, j) * v(i, j);
+			F2(i, j) = rho(i, j) * u(i, j) * v(i, j) - tau_xy;
+			F3(i, j) = rho(i, j) * pow(v(i, j), 2) + p(i, j) - tau_yy;
 			F5(i, j) = (U5(i, j) + p(i, j)) * v(i, j) - u(i, j) * tau_xy - v(i, j) * tau_yy + q_y;
 		}
 
@@ -360,8 +359,8 @@ void MacCormack()
 	Array2D dU2dt(IMAX, JMAX, 0.0);
 	Array2D dU3dt(IMAX, JMAX, 0.0);
 	Array2D dU5dt(IMAX, JMAX, 0.0);
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			const double dE1dx = (E1(i + 1, j) - E1(i, j)) / dx;
 			const double dF1dy = (F1(i, j + 1) - F1(i, j)) / dy;
@@ -385,8 +384,8 @@ void MacCormack()
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
 	Array2D U5_bar(IMAX, JMAX, 0.0);
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			U1_bar(i, j) = U1(i, j) + dU1dt(i, j) * dt;
 			U2_bar(i, j) = U2(i, j) + dU2dt(i, j) * dt;
@@ -394,54 +393,51 @@ void MacCormack()
 			U5_bar(i, j) = U5(i, j) + dU5dt(i, j) * dt;
 		}
 
-    Array2D rho_bar(IMAX, JMAX, 0.0);
-    Array2D u_bar(IMAX, JMAX, 0.0);
-    Array2D v_bar(IMAX, JMAX, 0.0);
-    Array2D p_bar(IMAX, JMAX, 0.0);
-    Array2D T_bar(IMAX, JMAX, Tw);
-    Array2D e_bar(IMAX, JMAX, 0.0);
+	Array2D rho_bar(IMAX, JMAX, 0.0);
+	Array2D u_bar(IMAX, JMAX, 0.0);
+	Array2D v_bar(IMAX, JMAX, 0.0);
+	Array2D p_bar(IMAX, JMAX, 0.0);
+	Array2D T_bar(IMAX, JMAX, Tw);
+	Array2D e_bar(IMAX, JMAX, 0.0);
 
-    // Update values at inner
-    for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-        for (size_t i = IMIN+1; i <= IMAX-1; ++i)
-        {
-            rho_bar(i, j) = U1_bar(i, j);
-            u_bar(i, j) = U2_bar(i, j) / U1_bar(i, j);
-            v_bar(i, j) = U3_bar(i, j) / U1_bar(i, j);
-            const double K_bar = 0.5*(pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
-            e_bar(i, j) = U5_bar(i, j) / U1_bar(i, j) - K_bar;
-            T_bar(i, j) = e_bar(i, j) / Cv;
-            p_bar(i, j) = rho_bar(i, j) * R * T_bar(i, j);
-        }
+	// Update values at inner
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
+		{
+			rho_bar(i, j) = U1_bar(i, j);
+			u_bar(i, j) = U2_bar(i, j) / U1_bar(i, j);
+			v_bar(i, j) = U3_bar(i, j) / U1_bar(i, j);
+			const double K_bar = 0.5 * (pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
+			e_bar(i, j) = U5_bar(i, j) / U1_bar(i, j) - K_bar;
+			T_bar(i, j) = e_bar(i, j) / Cv;
+			p_bar(i, j) = rho_bar(i, j) * R * T_bar(i, j);
+		}
 
-    // Update values at boundary
-    set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
+	// Update values at boundary
+	set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
 
-    for(size_t j=JMIN; j <= JMAX; ++j)
-        for(size_t i=IMIN; i <= IMAX; ++i)
-            if(at_boundary(i, j))
-            {
-                U1_bar(i, j) = rho_bar(i, j);
-                U2_bar(i, j) = rho_bar(i, j) * u_bar(i, j);
-                U3_bar(i, j) = rho_bar(i, j) * v_bar(i, j);
-                const double K = 0.5 * (pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
-                U5_bar(i, j) = rho_bar(i, j) * (e_bar(i, j) + K);
-            }
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+			if (at_boundary(i, j))
+			{
+				U1_bar(i, j) = rho_bar(i, j);
+				U2_bar(i, j) = rho_bar(i, j) * u_bar(i, j);
+				U3_bar(i, j) = rho_bar(i, j) * v_bar(i, j);
+				const double K = 0.5 * (pow(u_bar(i, j), 2) + pow(v_bar(i, j), 2));
+				U5_bar(i, j) = rho_bar(i, j) * (e_bar(i, j) + K);
+			}
 
-    /********************************* Checking *******************************/
-    for(size_t j=JMIN; j<=JMAX; ++j)
-        for(size_t i=IMIN; i<=IMAX; ++i)
-			if(rho_bar(i, j) < 0 || T_bar(i,j) < 0 || p_bar(i, j) < 0)
-            {
-                string msg("\n("+to_string(i)+", "+to_string(j)+"):");
-                string rho_msg(" rho_bar="+to_string(rho_bar(i,j)));
-                msg += rho_msg;
-                string T_msg(" T_bar="+to_string(T_bar(i,j)));
-                msg += T_msg;
-                string p_msg(" p_bar="+to_string(p_bar(i,j)));
-                msg += p_msg;
+	/********************************* Checking *******************************/
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+			if (rho_bar(i, j) < 0 || T_bar(i, j) < 0 || p_bar(i, j) < 0)
+			{
+				string msg("\n(" + to_string(i) + ", " + to_string(j) + "):");
+				msg += string(" rho_bar=" + to_string(rho_bar(i, j)));
+				msg += string(" T_bar=" + to_string(T_bar(i, j)));
+				msg += string(" p_bar=" + to_string(p_bar(i, j)));
 				throw runtime_error(msg);
-            }
+			}
 
 	/*************************** Backward Difference **************************/
 	Array2D mu_bar(IMAX, JMAX, 0.0);
@@ -459,35 +455,35 @@ void MacCormack()
 			// Forward difference within E for x-derivatives
 			double dudx = 0.0, dvdx = 0.0, dTdx = 0.0;
 			if (i == IMAX)
-            {
+			{
 				dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
-                dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
-                dTdx = (T_bar(i, j) - T_bar(i - 1, j)) / dx;
-            }
+				dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
+				dTdx = (T_bar(i, j) - T_bar(i - 1, j)) / dx;
+			}
 			else
-            {
+			{
 				dudx = (u_bar(i + 1, j) - u_bar(i, j)) / dx;
-                dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
-                dTdx = (T_bar(i + 1, j) - T_bar(i, j)) / dx;
-            }
+				dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
+				dTdx = (T_bar(i + 1, j) - T_bar(i, j)) / dx;
+			}
 
 			// Central difference within E for y-derivatives
 			double dudy = 0.0, dvdy = 0.0;
 			if (j == JMIN)
-            {
-			    dudy = (u_bar(i, j + 2) - 4 * u_bar(i, j + 1) + 3 * u_bar(i, j)) / (-dy2);
-                dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
-            }
+			{
+				dudy = (u_bar(i, j + 2) - 4 * u_bar(i, j + 1) + 3 * u_bar(i, j)) / (-dy2);
+				dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
+			}
 			else if (j == JMAX)
-            {
+			{
 				dudy = (u_bar(i, j) - u_bar(i, j - 1)) / dy;
-                dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
-            }
+				dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
+			}
 			else
-            {
+			{
 				dudy = (u_bar(i, j + 1) - u_bar(i, j - 1)) / dy2;
-                dvdy = (v_bar(i, j + 1) - v_bar(i, j - 1)) / dy2;
-            }
+				dvdy = (v_bar(i, j + 1) - v_bar(i, j - 1)) / dy2;
+			}
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -498,9 +494,9 @@ void MacCormack()
 			const double q_x = -k_bar(i, j) * dTdx;
 
 			// Elements of E
-			E1_bar(i, j) = rho_bar(i, j)*u_bar(i, j);
-			E2_bar(i, j) = rho_bar(i, j)*pow(u_bar(i, j), 2) + p_bar(i, j) - tau_xx;
-			E3_bar(i, j) = rho_bar(i, j)*u_bar(i, j)*v_bar(i, j) - tau_xy;
+			E1_bar(i, j) = rho_bar(i, j) * u_bar(i, j);
+			E2_bar(i, j) = rho_bar(i, j) * pow(u_bar(i, j), 2) + p_bar(i, j) - tau_xx;
+			E3_bar(i, j) = rho_bar(i, j) * u_bar(i, j) * v_bar(i, j) - tau_xy;
 			E5_bar(i, j) = (U5_bar(i, j) + p_bar(i, j)) * u_bar(i, j) - u_bar(i, j) * tau_xx - v_bar(i, j) * tau_xy + q_x;
 		}
 
@@ -514,35 +510,35 @@ void MacCormack()
 			// Central difference within F for x-derivatives
 			double dudx = 0.0, dvdx = 0.0;
 			if (i == IMIN)
-            {
+			{
 				dudx = (u_bar(i + 1, j) - u_bar(i, j)) / dx;
-                dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
-            }
+				dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
+			}
 			else if (i == IMAX)
-            {
-			    dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
-                dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
-            }
+			{
+				dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
+				dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
+			}
 			else
-            {
+			{
 				dudx = (u_bar(i + 1, j) - u_bar(i - 1, j)) / dx2;
-                dvdx = (v_bar(i + 1, j) - v_bar(i - 1, j)) / dx2;
-            }
+				dvdx = (v_bar(i + 1, j) - v_bar(i - 1, j)) / dx2;
+			}
 
 			// Forward difference within F for y-derivatives
 			double dudy = 0.0, dvdy = 0.0, dTdy = 0.0;
 			if (j == JMAX)
-            {
+			{
 				dudy = (u_bar(i, j) - u_bar(i, j - 1)) / dy;
-                dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
-                dTdy = (T_bar(i, j) - T_bar(i, j - 1)) / dy;
-            }
+				dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
+				dTdy = (T_bar(i, j) - T_bar(i, j - 1)) / dy;
+			}
 			else
-            {
+			{
 				dudy = (u_bar(i, j + 1) - u_bar(i, j)) / dy;
-                dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
-                dTdy = (T_bar(i, j + 1) - T_bar(i, j)) / dy;
-            }
+				dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
+				dTdy = (T_bar(i, j + 1) - T_bar(i, j)) / dy;
+			}
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -553,9 +549,9 @@ void MacCormack()
 			const double q_y = -k_bar(i, j) * dTdy;
 
 			// Elements of F
-			F1_bar(i, j) = rho_bar(i, j)*v_bar(i, j);
-			F2_bar(i, j) = rho_bar(i, j)*u_bar(i, j)*v_bar(i, j) - tau_xy;
-			F3_bar(i, j) = rho_bar(i, j)*pow(v_bar(i, j), 2) + p_bar(i, j) - tau_yy;
+			F1_bar(i, j) = rho_bar(i, j) * v_bar(i, j);
+			F2_bar(i, j) = rho_bar(i, j) * u_bar(i, j) * v_bar(i, j) - tau_xy;
+			F3_bar(i, j) = rho_bar(i, j) * pow(v_bar(i, j), 2) + p_bar(i, j) - tau_yy;
 			F5_bar(i, j) = (U5_bar(i, j) + p_bar(i, j)) * v_bar(i, j) - u_bar(i, j) * tau_xy - v_bar(i, j) * tau_yy + q_y;
 		}
 
@@ -563,8 +559,8 @@ void MacCormack()
 	Array2D dU2dt_bar(IMAX, JMAX, 0.0);
 	Array2D dU3dt_bar(IMAX, JMAX, 0.0);
 	Array2D dU5dt_bar(IMAX, JMAX, 0.0);
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			const double dE1dx = (E1_bar(i, j) - E1_bar(i - 1, j)) / dx;
 			const double dF1dy = (F1_bar(i, j) - F1_bar(i, j - 1)) / dy;
@@ -588,68 +584,65 @@ void MacCormack()
 	Array2D dU2dt_av(IMAX, JMAX, 0.0);
 	Array2D dU3dt_av(IMAX, JMAX, 0.0);
 	Array2D dU5dt_av(IMAX, JMAX, 0.0);
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
-			dU1dt_av(i, j) = 0.5*(dU1dt(i, j) + dU1dt_bar(i, j));
-			dU2dt_av(i, j) = 0.5*(dU2dt(i, j) + dU2dt_bar(i, j));
-			dU3dt_av(i, j) = 0.5*(dU3dt(i, j) + dU3dt_bar(i, j));
-			dU5dt_av(i, j) = 0.5*(dU5dt(i, j) + dU5dt_bar(i, j));
+			dU1dt_av(i, j) = 0.5 * (dU1dt(i, j) + dU1dt_bar(i, j));
+			dU2dt_av(i, j) = 0.5 * (dU2dt(i, j) + dU2dt_bar(i, j));
+			dU3dt_av(i, j) = 0.5 * (dU3dt(i, j) + dU3dt_bar(i, j));
+			dU5dt_av(i, j) = 0.5 * (dU5dt(i, j) + dU5dt_bar(i, j));
 		}
 
 	/********************************* Update *********************************/
 	// Inner values
-	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
-            // Conservative values
+			// Conservative values
 			U1(i, j) += dU1dt_av(i, j) * dt;
 			U2(i, j) += dU2dt_av(i, j) * dt;
 			U3(i, j) += dU3dt_av(i, j) * dt;
 			U5(i, j) += dU5dt_av(i, j) * dt;
 
-            // Primitive values
-            rho(i, j) = U1(i, j);
-            u(i, j) = U2(i, j) / U1(i, j);
-            v(i, j) = U3(i, j) / U1(i, j);
-            const double K = 0.5*(pow(u(i, j), 2) + pow(v(i, j), 2));
-            e(i, j) = U5(i, j) / U1(i, j) - K;
-            T(i, j) = e(i, j) / Cv;
-            p(i, j) = rho(i, j) * R * T(i, j);
+			// Primitive values
+			rho(i, j) = U1(i, j);
+			u(i, j) = U2(i, j) / U1(i, j);
+			v(i, j) = U3(i, j) / U1(i, j);
+			const double K = 0.5 * (pow(u(i, j), 2) + pow(v(i, j), 2));
+			e(i, j) = U5(i, j) / U1(i, j) - K;
+			T(i, j) = e(i, j) / Cv;
+			p(i, j) = rho(i, j) * R * T(i, j);
 		}
 
 	// Primitive values at boundary
 	set_boundary_values(rho, u, v, p, T, e);
 
-    // Conservative values at boundary
-    for(size_t j=JMIN; j <= JMAX; ++j)
-        for(size_t i=IMIN; i <= IMAX; ++i)
-            if(at_boundary(i, j))
-            {
-                U1(i, j) = rho(i, j);
-                U2(i, j) = rho(i, j) * u(i, j);
-                U3(i, j) = rho(i, j) * v(i, j);
-                const double K = 0.5 * (pow(u(i, j), 2) + pow(v(i, j), 2));
-                U5(i, j) = rho(i, j) * (e(i, j) + K);
-            }
+	// Conservative values at boundary
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+			if (at_boundary(i, j))
+			{
+				U1(i, j) = rho(i, j);
+				U2(i, j) = rho(i, j) * u(i, j);
+				U3(i, j) = rho(i, j) * v(i, j);
+				const double K = 0.5 * (pow(u(i, j), 2) + pow(v(i, j), 2));
+				U5(i, j) = rho(i, j) * (e(i, j) + K);
+			}
 
-    /********************************* Checking *******************************/
-    for(size_t j=JMIN; j<=JMAX; ++j)
-        for(size_t i=IMIN; i<=IMAX; ++i)
-            if(rho(i, j) < 0 || T(i,j) < 0 || p(i, j) < 0)
-            {
-                string msg("\n("+to_string(i)+", "+to_string(j)+"):");
-                string rho_msg(" rho="+to_string(rho(i,j)));
-                msg += rho_msg;
-                string T_msg(" T="+to_string(T(i,j)));
-                msg += T_msg;
-                string p_msg(" p="+to_string(p(i,j)));
-                msg += p_msg;
-                throw runtime_error(msg);
-            }
+	/********************************* Checking *******************************/
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		for (size_t i = IMIN; i <= IMAX; ++i)
+			if (rho(i, j) < 0 || T(i, j) < 0 || p(i, j) < 0)
+			{
+				string msg("\n(" + to_string(i) + ", " + to_string(j) + "):");
+				msg += string(" rho=" + to_string(rho(i, j)));
+				msg += string(" T=" + to_string(T(i, j)));
+				msg += string(" p=" + to_string(p(i, j)));
+				throw runtime_error(msg);
+			}
 
-    // Physical properties
-    update_physical_properties(T, mu, k, lambda);
+	// Physical properties
+	update_physical_properties(T, mu, k, lambda);
 }
 
 void write_tecplot(size_t n)
@@ -678,11 +671,11 @@ void write_tecplot(size_t n)
 			result << setw(WIDTH) << setprecision(DIGITS) << u(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << v(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
-            result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
-            result << setw(WIDTH) << setprecision(DIGITS) << U1(i, j);
-            result << setw(WIDTH) << setprecision(DIGITS) << U2(i, j);
-            result << setw(WIDTH) << setprecision(DIGITS) << U3(i, j);
-            result << setw(WIDTH) << setprecision(DIGITS) << U5(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << U1(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << U2(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << U3(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << U5(i, j);
 			result << endl;
 		}
 
@@ -741,22 +734,22 @@ void solve()
 	while (!converged)
 	{
 		++iter;
-        cout << "Iter" << iter << ":" << endl;
+		cout << "Iter" << iter << ":" << endl;
 
-        dt = TimeStep();
-        if(dt < 0)
-            throw runtime_error("dt="+to_string(dt)+"s");
-        cout << "\tt=" << t <<"s, dt=" << dt << "s" << endl;
+		dt = TimeStep();
+		if (dt < 0)
+			throw runtime_error("dt=" + to_string(dt) + "s");
+		cout << "\tt=" << t << "s, dt=" << dt << "s" << endl;
 
 		MacCormack();
 
-        t += dt;
-        output();
+		t += dt;
+		output();
 		converged = check_convergence();
 	}
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 	init();
 	output();
