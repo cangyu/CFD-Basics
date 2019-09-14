@@ -204,6 +204,8 @@ void update_physical_properties(const Array2D &T0, Array2D &mu0, Array2D &k0, Ar
 void init()
 {
 	/********************************** Grid **********************************/
+	cout << "Lx=" << LHORI << "m, dx=" << dx << "m" << endl;
+	cout << "Ly=" << LVERT << "m, dy=" << dy << "m" << endl;
 	for (size_t i = 1; i < IMAX; ++i)
 		x[i] = x[i - 1] + dx;
 
@@ -244,8 +246,6 @@ void init()
 void MacCormack()
 {
 	/***************************** Forward Difference *************************/
-	cout << "\tForward Difference...\n";
-	// X-derivatives
 	Array2D E1(IMAX, JMAX, 0.0);
 	Array2D E2(IMAX, JMAX, 0.0);
 	Array2D E3(IMAX, JMAX, 0.0);
@@ -254,40 +254,37 @@ void MacCormack()
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Backward difference within E for x-derivatives
-			double dudx = 0.0;
-			if (i == 1)
+			double dudx = 0.0, dvdx = 0.0, dTdx = 0.0;
+			if (i == IMIN)
+            {
 				dudx = (u(i + 1, j) - u(i, j)) / dx;
+                dvdx = (v(i + 1, j) - v(i, j)) / dx;
+                dTdx = (T(i + 1, j) - T(i, j)) / dx;
+            }
 			else
-				dudx = (u(i, j) - u(i - 1, j)) / dx;
-
-			double dvdx = 0.0;
-			if (i == 1)
-				dvdx = (v(i + 1, j) - v(i, j)) / dx;
-			else
-				dvdx = (v(i, j) - v(i - 1, j)) / dx;
-
-			double dTdx = 0.0;
-			if (i == 1)
-				dTdx = (T(i + 1, j) - T(i, j)) / dx;
-			else
-				dTdx = (T(i, j) - T(i - 1, j)) / dx;
+            {
+			    dudx = (u(i, j) - u(i - 1, j)) / dx;
+                dvdx = (v(i, j) - v(i - 1, j)) / dx;
+                dTdx = (T(i, j) - T(i - 1, j)) / dx;
+            }
 
 			// Central difference within E for y-derivatives
-			double dudy = 0.0;
-			if (j == 1)
-				dudy = (u(i, j + 1) - u(i, j)) / dy;
+			double dudy = 0.0, dvdy = 0.0;
+			if (j == JMIN)
+			{
+				dudy = (u(i, j + 2) - 4 * u(i, j + 1) + 3 * u(i, j)) / (-dy2);
+                dvdy = (v(i, j + 1) - v(i, j)) / dy;
+            }
 			else if (j == JMAX)
+            {
 				dudy = (u(i, j) - u(i, j - 1)) / dy;
+                dvdy = (v(i, j) - v(i, j - 1)) / dy;
+            }
 			else
+            {
 				dudy = (u(i, j + 1) - u(i, j - 1)) / dy2;
-
-			double dvdy = 0.0;
-			if (j == 1)
-				dvdy = (v(i, j + 1) - v(i, j)) / dy;
-			else if (j == JMAX)
-				dvdy = (v(i, j) - v(i, j - 1)) / dy;
-			else
-				dvdy = (v(i, j + 1) - v(i, j - 1)) / dy2;
+                dvdy = (v(i, j + 1) - v(i, j - 1)) / dy2;
+            }
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -304,7 +301,6 @@ void MacCormack()
 			E5(i, j) = (U5(i, j) + p(i, j)) * u(i, j) - u(i, j) * tau_xx - v(i, j) * tau_xy + q_x;
 		}
 
-	// Y-derivatives
 	Array2D F1(IMAX, JMAX, 0.0);
 	Array2D F2(IMAX, JMAX, 0.0);
 	Array2D F3(IMAX, JMAX, 0.0);
@@ -313,40 +309,37 @@ void MacCormack()
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Central difference within F for x-derivatives
-			double dudx = 0.0;
-			if (i == 1)
+			double dudx = 0.0, dvdx = 0.0;
+			if (i == IMIN)
+            {
 				dudx = (u(i + 1, j) - u(i, j)) / dx;
+                dvdx = (v(i + 1, j) - v(i, j)) / dx;
+            }
 			else if (i == IMAX)
+            {
 				dudx = (u(i, j) - u(i - 1, j)) / dx;
+                dvdx = (v(i, j) - v(i - 1, j)) / dx;
+            }
 			else
+            {
 				dudx = (u(i + 1, j) - u(i - 1, j)) / dx2;
-
-			double dvdx = 0.0;
-			if (i == 1)
-				dvdx = (v(i + 1, j) - v(i, j)) / dx;
-			else if (i == IMAX)
-				dvdx = (v(i, j) - v(i - 1, j)) / dx;
-			else
-				dvdx = (v(i + 1, j) - v(i - 1, j)) / dx2;
+                dvdx = (v(i + 1, j) - v(i - 1, j)) / dx2;
+            }
 
 			// Backward difference within F for y-derivatives
-			double dudy = 0.0;
-			if (j == 1)
-				dudy = (u(i, j + 1) - u(i, j)) / dy;
+			double dudy = 0.0, dvdy = 0.0, dTdy = 0.0;
+			if (j == JMIN)
+            {
+				dudy = (u(i, j + 2) - 4 * u(i, j + 1) + 3 * u(i, j)) / (-dy2);
+                dvdy = (v(i, j + 1) - v(i, j)) / dy;
+                dTdy = (T(i, j + 1) - T(i, j)) / dy;
+            }
 			else
-				dudy = (u(i, j) - u(i, j - 1)) / dy;
-
-			double dvdy = 0.0;
-			if (j == 1)
-				dvdy = (v(i, j + 1) - v(i, j)) / dy;
-			else
-				dvdy = (v(i, j) - v(i, j - 1)) / dy;
-
-			double dTdy = 0.0;
-			if (j == 1)
-				dTdy = (T(i, j + 1) - T(i, j)) / dy;
-			else
-				dTdy = (T(i, j) - T(i, j - 1)) / dy;
+            {
+			    dudy = (u(i, j) - u(i, j - 1)) / dy;
+                dvdy = (v(i, j) - v(i, j - 1)) / dy;
+                dTdy = (T(i, j) - T(i, j - 1)) / dy;
+            }
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -363,7 +356,6 @@ void MacCormack()
 			F5(i, j) = (U5(i, j) + p(i, j)) * v(i, j) - u(i, j) * tau_xy - v(i, j) * tau_yy + q_y;
 		}
 
-	// Temporal derivatives
 	Array2D dU1dt(IMAX, JMAX, 0.0);
 	Array2D dU2dt(IMAX, JMAX, 0.0);
 	Array2D dU3dt(IMAX, JMAX, 0.0);
@@ -389,7 +381,6 @@ void MacCormack()
 		}
 
 	/******************************* Prediction *******************************/
-	cout << "\tPrediction...\n";
 	Array2D U1_bar(IMAX, JMAX, 0.0);
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
@@ -427,41 +418,21 @@ void MacCormack()
     set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
 
     /********************************* Checking *******************************/
-    cout << "\tChecking predicted primitive values..." << endl;
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
-        {
-			string msg("\n("+to_string(i)+", "+to_string(j)+"):");
-			bool flag = false;
-
-			if(rho_bar(i, j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string rho_msg(" rho_bar="+to_string(rho_bar(i,j)));
-				msg += rho_msg;
-			}
-			if(T_bar(i,j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string T_msg(" T_bar="+to_string(T_bar(i,j)));
-				msg += T_msg;
-            }
-			if(p_bar(i, j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string p_msg(" p_bar="+to_string(p_bar(i,j)));
-				msg += p_msg;
-			}
-            
-			if(flag)
+			if(rho_bar(i, j) < 0 || T_bar(i,j) < 0 || p_bar(i, j) < 0)
+            {
+                string msg("\n("+to_string(i)+", "+to_string(j)+"):");
+                string rho_msg(" rho_bar="+to_string(rho_bar(i,j)));
+                msg += rho_msg;
+                string T_msg(" T_bar="+to_string(T_bar(i,j)));
+                msg += T_msg;
+                string p_msg(" p_bar="+to_string(p_bar(i,j)));
+                msg += p_msg;
 				throw runtime_error(msg);
-        }
+            }
 
 	/*************************** Backward Difference **************************/
-	cout << "\tBackward Difference..." << endl;
 	Array2D mu_bar(IMAX, JMAX, 0.0);
 	Array2D k_bar(IMAX, JMAX, 0.0);
 	Array2D lambda_bar(IMAX, JMAX, 0.0);
@@ -475,40 +446,37 @@ void MacCormack()
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Forward difference within E for x-derivatives
-			double dudx = 0.0;
+			double dudx = 0.0, dvdx = 0.0, dTdx = 0.0;
 			if (i == IMAX)
+            {
 				dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
+                dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
+                dTdx = (T_bar(i, j) - T_bar(i - 1, j)) / dx;
+            }
 			else
+            {
 				dudx = (u_bar(i + 1, j) - u_bar(i, j)) / dx;
-
-			double dvdx = 0.0;
-			if (i == IMAX)
-				dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
-			else
-				dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
-
-			double dTdx = 0.0;
-			if (i == IMAX)
-				dTdx = (T_bar(i, j) - T_bar(i - 1, j)) / dx;
-			else
-				dTdx = (T_bar(i + 1, j) - T_bar(i, j)) / dx;
+                dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
+                dTdx = (T_bar(i + 1, j) - T_bar(i, j)) / dx;
+            }
 
 			// Central difference within E for y-derivatives
-			double dudy = 0.0;
+			double dudy = 0.0, dvdy = 0.0;
 			if (j == JMIN)
-				dudy = (u_bar(i, j + 1) - u_bar(i, j)) / dy;
+            {
+			    dudy = (u_bar(i, j + 2) - 4 * u_bar(i, j + 1) + 3 * u_bar(i, j)) / (-dy2);
+                dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
+            }
 			else if (j == JMAX)
+            {
 				dudy = (u_bar(i, j) - u_bar(i, j - 1)) / dy;
+                dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
+            }
 			else
+            {
 				dudy = (u_bar(i, j + 1) - u_bar(i, j - 1)) / dy2;
-
-			double dvdy = 0.0;
-			if (j == JMIN)
-				dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
-			else if (j == JMAX)
-				dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
-			else
-				dvdy = (v_bar(i, j + 1) - v_bar(i, j - 1)) / dy2;
+                dvdy = (v_bar(i, j + 1) - v_bar(i, j - 1)) / dy2;
+            }
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -533,40 +501,37 @@ void MacCormack()
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
 			// Central difference within F for x-derivatives
-			double dudx = 0.0;
+			double dudx = 0.0, dvdx = 0.0;
 			if (i == IMIN)
+            {
 				dudx = (u_bar(i + 1, j) - u_bar(i, j)) / dx;
+                dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
+            }
 			else if (i == IMAX)
-				dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
+            {
+			    dudx = (u_bar(i, j) - u_bar(i - 1, j)) / dx;
+                dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
+            }
 			else
+            {
 				dudx = (u_bar(i + 1, j) - u_bar(i - 1, j)) / dx2;
-
-			double dvdx = 0.0;
-			if (i == IMIN)
-				dvdx = (v_bar(i + 1, j) - v_bar(i, j)) / dx;
-			else if (i == IMAX)
-				dvdx = (v_bar(i, j) - v_bar(i - 1, j)) / dx;
-			else
-				dvdx = (v_bar(i + 1, j) - v_bar(i - 1, j)) / dx2;
+                dvdx = (v_bar(i + 1, j) - v_bar(i - 1, j)) / dx2;
+            }
 
 			// Forward difference within F for y-derivatives
-			double dudy = 0.0;
+			double dudy = 0.0, dvdy = 0.0, dTdy = 0.0;
 			if (j == JMAX)
+            {
 				dudy = (u_bar(i, j) - u_bar(i, j - 1)) / dy;
+                dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
+                dTdy = (T_bar(i, j) - T_bar(i, j - 1)) / dy;
+            }
 			else
+            {
 				dudy = (u_bar(i, j + 1) - u_bar(i, j)) / dy;
-
-			double dvdy = 0.0;
-			if (j == JMAX)
-				dvdy = (v_bar(i, j) - v_bar(i, j - 1)) / dy;
-			else
-				dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
-
-			double dTdy = 0.0;
-			if (j == JMAX)
-				dTdy = (T_bar(i, j) - T_bar(i, j - 1)) / dy;
-			else
-				dTdy = (T_bar(i, j + 1) - T_bar(i, j)) / dy;
+                dvdy = (v_bar(i, j + 1) - v_bar(i, j)) / dy;
+                dTdy = (T_bar(i, j + 1) - T_bar(i, j)) / dy;
+            }
 
 			// Shear stress
 			const double divergence = dudx + dvdy;
@@ -587,8 +552,8 @@ void MacCormack()
 	Array2D dU2dt_bar(IMAX, JMAX, 0.0);
 	Array2D dU3dt_bar(IMAX, JMAX, 0.0);
 	Array2D dU5dt_bar(IMAX, JMAX, 0.0);
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			const double dE1dx = (E1_bar(i, j) - E1_bar(i - 1, j)) / dx;
 			const double dF1dy = (F1_bar(i, j) - F1_bar(i, j - 1)) / dy;
@@ -608,13 +573,12 @@ void MacCormack()
 		}
 
 	/********************************* Average ********************************/
-	cout << "\tAveraging derivatives..." << endl;
 	Array2D dU1dt_av(IMAX, JMAX, 0.0);
 	Array2D dU2dt_av(IMAX, JMAX, 0.0);
 	Array2D dU3dt_av(IMAX, JMAX, 0.0);
 	Array2D dU5dt_av(IMAX, JMAX, 0.0);
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
 			dU1dt_av(i, j) = 0.5*(dU1dt(i, j) + dU1dt_bar(i, j));
 			dU2dt_av(i, j) = 0.5*(dU2dt(i, j) + dU2dt_bar(i, j));
@@ -623,66 +587,55 @@ void MacCormack()
 		}
 
 	/********************************* Update *********************************/
-	cout << "\tUpdating both primitive and conservative values..." << endl;
-	// Conservative values at inner
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
+	// Inner values
+	for (size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for (size_t i = IMIN+1; i <= IMAX-1; ++i)
 		{
+            // Conservative values
 			U1(i, j) += dU1dt_av(i, j) * dt;
 			U2(i, j) += dU2dt_av(i, j) * dt;
 			U3(i, j) += dU3dt_av(i, j) * dt;
 			U5(i, j) += dU5dt_av(i, j) * dt;
-		}
 
-	// Primitive values at inner
-	for (int j = JMIN+1; j <= JMAX-1; ++j)
-		for (int i = IMIN+1; i <= IMAX-1; ++i)
-		{
-			rho(i, j) = U1(i, j);
-			u(i, j) = U2(i, j) / U1(i, j);
-			v(i, j) = U3(i, j) / U1(i, j);
-			const double K = 0.5*(pow(u(i, j), 2) + pow(v(i, j), 2));
-			e(i, j) = U5(i, j) / U1(i, j) - K;
-			T(i, j) = e(i, j) / Cv;
-			p(i, j) = rho(i, j) * R * T(i, j);
+            // Primitive values
+            rho(i, j) = U1(i, j);
+            u(i, j) = U2(i, j) / U1(i, j);
+            v(i, j) = U3(i, j) / U1(i, j);
+            const double K = 0.5*(pow(u(i, j), 2) + pow(v(i, j), 2));
+            e(i, j) = U5(i, j) / U1(i, j) - K;
+            T(i, j) = e(i, j) / Cv;
+            p(i, j) = rho(i, j) * R * T(i, j);
 		}
 
 	// Primitive values at boundary
 	set_boundary_values(rho, u, v, p, T, e);
 
+    // Conservative values at boundary
+    for(size_t j=JMIN; j <= JMAX; ++j)
+        for(size_t i=IMIN; i <= IMAX; ++i)
+            if(at_boundary(i, j))
+            {
+                U1(i, j) = rho(i, j);
+                U2(i, j) = rho(i, j) * u(i, j);
+                U3(i, j) = rho(i, j) * v(i, j);
+                const double K = 0.5 * (pow(u(i, j), 2) + pow(v(i, j), 2));
+                U5(i, j) = rho(i, j) * (e(i, j) + K);
+            }
+
     /********************************* Checking *******************************/
-    cout << "\tChecking updated primitive values..." << endl;
     for(size_t j=JMIN; j<=JMAX; ++j)
         for(size_t i=IMIN; i<=IMAX; ++i)
-        {
-			string msg("\n("+to_string(i)+", "+to_string(j)+"):");
-			bool flag = false;
-
-			if(rho(i, j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string rho_msg(" rho="+to_string(rho(i,j)));
-				msg += rho_msg;
-			}
-			if(T(i,j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string T_msg(" T="+to_string(T(i,j)));
-				msg += T_msg;
+            if(rho(i, j) < 0 || T(i,j) < 0 || p(i, j) < 0)
+            {
+                string msg("\n("+to_string(i)+", "+to_string(j)+"):");
+                string rho_msg(" rho="+to_string(rho(i,j)));
+                msg += rho_msg;
+                string T_msg(" T="+to_string(T(i,j)));
+                msg += T_msg;
+                string p_msg(" p="+to_string(p(i,j)));
+                msg += p_msg;
+                throw runtime_error(msg);
             }
-			if(p(i, j) < 0)
-			{
-				if(!flag)
-					flag = true;
-				string p_msg(" p="+to_string(p(i,j)));
-				msg += p_msg;
-			}
-            
-			if(flag)
-				throw runtime_error(msg);
-        }
 
     // Physical properties
     update_physical_properties(T, mu, k, lambda);
