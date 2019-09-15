@@ -16,7 +16,8 @@ private:
 	size_t m_Nx, m_Ny;
 
 public:
-	Array2D(size_t nx, size_t ny, double val = 0.0) : m_data(nx * ny, val)
+	Array2D(size_t nx, size_t ny, double val = 0.0) :
+	    m_data(nx * ny, val)
 	{
 		m_Nx = nx;
 		m_Ny = ny;
@@ -91,8 +92,8 @@ Array2D T(IMAX, JMAX, Tw);
 Array2D e(IMAX, JMAX, 0.0); // Internal energy per unit mass
 
 // Physical properties
-Array2D mu(IMAX, JMAX, 0.0);	 // Kg/(m*s)
-Array2D k(IMAX, JMAX, 0.0);		 // J/(s*m*K)
+Array2D mu(IMAX, JMAX, 0.0); // Kg/(m*s)
+Array2D k(IMAX, JMAX, 0.0); // J/(s*m*K)
 Array2D lambda(IMAX, JMAX, 0.0); // Kg/(m*s)
 
 // Conservative variables
@@ -104,7 +105,7 @@ Array2D U5(IMAX, JMAX, 0.0); // rho(e+V^2 / 2)
 inline double Sutherland(double T)
 {
 	static const double mu0 = 1.7894e-5; // Kg/(m*s)
-	static const double T0 = 288.16;	 // K
+	static const double T0 = 288.16; // K
 
 	return mu0 * pow(T / T0, 1.5) * (T0 + 110.0) / (T + 110.0);
 }
@@ -135,7 +136,7 @@ inline bool at_boundary(size_t i, size_t j)
 	return i == IMIN || i == IMAX || j == JMIN || j == JMAX;
 }
 
-void set_boundary_values(Array2D &rho0, Array2D &u0, Array2D &v0, Array2D &p0, Array2D &T0, Array2D &e0)
+void Isothermal_BC(Array2D &rho0, Array2D &u0, Array2D &v0, Array2D &p0, Array2D &T0, Array2D &e0)
 {
 	// Front tip
 	u0(IMIN, JMIN) = 0.0;
@@ -225,7 +226,7 @@ void init()
 		}
 
 	/********************************** B.C. **********************************/
-	set_boundary_values(rho, u, v, p, T, e);
+    Isothermal_BC(rho, u, v, p, T, e);
 
 	/************************ Conservative Variables **************************/
 	for (size_t j = JMIN; j <= JMAX; ++j)
@@ -380,6 +381,7 @@ void MacCormack()
 		}
 
 	/******************************* Prediction *******************************/
+    // Conservative values at inner
 	Array2D U1_bar(IMAX, JMAX, 0.0);
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
@@ -400,8 +402,8 @@ void MacCormack()
 	Array2D T_bar(IMAX, JMAX, Tw);
 	Array2D e_bar(IMAX, JMAX, 0.0);
 
-	// Update values at inner
-	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+    // Primitive values at inner
+    for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			rho_bar(i, j) = U1_bar(i, j);
@@ -413,9 +415,10 @@ void MacCormack()
 			p_bar(i, j) = rho_bar(i, j) * R * T_bar(i, j);
 		}
 
-	// Update values at boundary
-	set_boundary_values(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
+	// Primitive values at boundary
+    Isothermal_BC(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
 
+    // Conservative values at boundary
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 			if (at_boundary(i, j))
@@ -615,7 +618,7 @@ void MacCormack()
 		}
 
 	// Primitive values at boundary
-	set_boundary_values(rho, u, v, p, T, e);
+    Isothermal_BC(rho, u, v, p, T, e);
 
 	// Conservative values at boundary
 	for (size_t j = JMIN; j <= JMAX; ++j)
