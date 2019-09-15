@@ -103,6 +103,59 @@ Array2D U2(IMAX, JMAX, 0.0); // rho u
 Array2D U3(IMAX, JMAX, 0.0); // rho v
 Array2D U5(IMAX, JMAX, 0.0); // rho(e+V^2 / 2)
 
+Array2D E1(IMAX, JMAX, 0.0);
+Array2D E2(IMAX, JMAX, 0.0);
+Array2D E3(IMAX, JMAX, 0.0);
+Array2D E5(IMAX, JMAX, 0.0);
+
+Array2D F1(IMAX, JMAX, 0.0);
+Array2D F2(IMAX, JMAX, 0.0);
+Array2D F3(IMAX, JMAX, 0.0);
+Array2D F5(IMAX, JMAX, 0.0);
+
+Array2D dU1dt(IMAX, JMAX, 0.0);
+Array2D dU2dt(IMAX, JMAX, 0.0);
+Array2D dU3dt(IMAX, JMAX, 0.0);
+Array2D dU5dt(IMAX, JMAX, 0.0);
+
+// Predicted values
+Array2D rho_bar(IMAX, JMAX, 0.0);
+Array2D u_bar(IMAX, JMAX, 0.0);
+Array2D v_bar(IMAX, JMAX, 0.0);
+Array2D p_bar(IMAX, JMAX, 0.0);
+Array2D T_bar(IMAX, JMAX, Tw);
+Array2D e_bar(IMAX, JMAX, 0.0);
+
+Array2D mu_bar(IMAX, JMAX, 0.0);
+Array2D k_bar(IMAX, JMAX, 0.0);
+Array2D lambda_bar(IMAX, JMAX, 0.0);
+
+Array2D U1_bar(IMAX, JMAX, 0.0);
+Array2D U2_bar(IMAX, JMAX, 0.0);
+Array2D U3_bar(IMAX, JMAX, 0.0);
+Array2D U5_bar(IMAX, JMAX, 0.0);
+
+Array2D E1_bar(IMAX, JMAX, 0.0);
+Array2D E2_bar(IMAX, JMAX, 0.0);
+Array2D E3_bar(IMAX, JMAX, 0.0);
+Array2D E5_bar(IMAX, JMAX, 0.0);
+
+Array2D F1_bar(IMAX, JMAX, 0.0);
+Array2D F2_bar(IMAX, JMAX, 0.0);
+Array2D F3_bar(IMAX, JMAX, 0.0);
+Array2D F5_bar(IMAX, JMAX, 0.0);
+
+Array2D dU1dt_bar(IMAX, JMAX, 0.0);
+Array2D dU2dt_bar(IMAX, JMAX, 0.0);
+Array2D dU3dt_bar(IMAX, JMAX, 0.0);
+Array2D dU5dt_bar(IMAX, JMAX, 0.0);
+
+// Averaged temporal derivatives
+Array2D dU1dt_av(IMAX, JMAX, 0.0);
+Array2D dU2dt_av(IMAX, JMAX, 0.0);
+Array2D dU3dt_av(IMAX, JMAX, 0.0);
+Array2D dU5dt_av(IMAX, JMAX, 0.0);
+
 inline double Sutherland(double T)
 {
 	static const double mu0 = 1.7894e-5; // Kg/(m*s)
@@ -247,10 +300,6 @@ void init()
 void MacCormack()
 {
 	/***************************** Forward Difference *************************/
-	Array2D E1(IMAX, JMAX, 0.0);
-	Array2D E2(IMAX, JMAX, 0.0);
-	Array2D E3(IMAX, JMAX, 0.0);
-	Array2D E5(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -302,10 +351,6 @@ void MacCormack()
 			E5(i, j) = (U5(i, j) + p(i, j)) * u(i, j) - u(i, j) * tau_xx - v(i, j) * tau_xy + q_x;
 		}
 
-	Array2D F1(IMAX, JMAX, 0.0);
-	Array2D F2(IMAX, JMAX, 0.0);
-	Array2D F3(IMAX, JMAX, 0.0);
-	Array2D F5(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -357,10 +402,6 @@ void MacCormack()
 			F5(i, j) = (U5(i, j) + p(i, j)) * v(i, j) - u(i, j) * tau_xy - v(i, j) * tau_yy + q_y;
 		}
 
-	Array2D dU1dt(IMAX, JMAX, 0.0);
-	Array2D dU2dt(IMAX, JMAX, 0.0);
-	Array2D dU3dt(IMAX, JMAX, 0.0);
-	Array2D dU5dt(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
@@ -383,10 +424,6 @@ void MacCormack()
 
 	/******************************* Prediction *******************************/
 	// Conservative values at inner
-	Array2D U1_bar(IMAX, JMAX, 0.0);
-	Array2D U2_bar(IMAX, JMAX, 0.0);
-	Array2D U3_bar(IMAX, JMAX, 0.0);
-	Array2D U5_bar(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
@@ -395,13 +432,6 @@ void MacCormack()
 			U3_bar(i, j) = U3(i, j) + dU3dt(i, j) * dt;
 			U5_bar(i, j) = U5(i, j) + dU5dt(i, j) * dt;
 		}
-
-	Array2D rho_bar(IMAX, JMAX, 0.0);
-	Array2D u_bar(IMAX, JMAX, 0.0);
-	Array2D v_bar(IMAX, JMAX, 0.0);
-	Array2D p_bar(IMAX, JMAX, 0.0);
-	Array2D T_bar(IMAX, JMAX, Tw);
-	Array2D e_bar(IMAX, JMAX, 0.0);
 
 	// Primitive values at inner
 	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
@@ -444,15 +474,8 @@ void MacCormack()
 			}
 
 	/*************************** Backward Difference **************************/
-	Array2D mu_bar(IMAX, JMAX, 0.0);
-	Array2D k_bar(IMAX, JMAX, 0.0);
-	Array2D lambda_bar(IMAX, JMAX, 0.0);
 	update_physical_properties(T_bar, mu_bar, k_bar, lambda_bar);
 
-	Array2D E1_bar(IMAX, JMAX, 0.0);
-	Array2D E2_bar(IMAX, JMAX, 0.0);
-	Array2D E3_bar(IMAX, JMAX, 0.0);
-	Array2D E5_bar(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -504,10 +527,6 @@ void MacCormack()
 			E5_bar(i, j) = (U5_bar(i, j) + p_bar(i, j)) * u_bar(i, j) - u_bar(i, j) * tau_xx - v_bar(i, j) * tau_xy + q_x;
 		}
 
-	Array2D F1_bar(IMAX, JMAX, 0.0);
-	Array2D F2_bar(IMAX, JMAX, 0.0);
-	Array2D F3_bar(IMAX, JMAX, 0.0);
-	Array2D F5_bar(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 		{
@@ -559,10 +578,6 @@ void MacCormack()
 			F5_bar(i, j) = (U5_bar(i, j) + p_bar(i, j)) * v_bar(i, j) - u_bar(i, j) * tau_xy - v_bar(i, j) * tau_yy + q_y;
 		}
 
-	Array2D dU1dt_bar(IMAX, JMAX, 0.0);
-	Array2D dU2dt_bar(IMAX, JMAX, 0.0);
-	Array2D dU3dt_bar(IMAX, JMAX, 0.0);
-	Array2D dU5dt_bar(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
@@ -584,10 +599,6 @@ void MacCormack()
 		}
 
 	/********************************* Average ********************************/
-	Array2D dU1dt_av(IMAX, JMAX, 0.0);
-	Array2D dU2dt_av(IMAX, JMAX, 0.0);
-	Array2D dU3dt_av(IMAX, JMAX, 0.0);
-	Array2D dU5dt_av(IMAX, JMAX, 0.0);
 	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
@@ -661,8 +672,8 @@ void write_tecplot(size_t n)
 		throw runtime_error("Failed to create data file!");
 
 	// Header
-	result << R"(TITLE = "t=)" << t << R"(")" << endl;
-	result << R"(VARIABLES = "X", "Y", "rho", "U", "V", "P", "T", "U1", "U2", "U3", "U5")" << endl;
+	result << R"(TITLE = "Flowfield at t=)" << t << R"(s")" << endl;
+	result << R"(VARIABLES = "X", "Y", "rho", "U", "V", "P", "T", "e", "U1", "U2", "U3", "U5")" << endl;
 	result << "ZONE I=" << IMAX << ", J=" << JMAX << ", F=POINT" << endl;
 
 	// Flow-field data
@@ -676,6 +687,7 @@ void write_tecplot(size_t n)
 			result << setw(WIDTH) << setprecision(DIGITS) << v(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << p(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << T(i, j);
+			result << setw(WIDTH) << setprecision(DIGITS) << e(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << U1(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << U2(i, j);
 			result << setw(WIDTH) << setprecision(DIGITS) << U3(i, j);
@@ -722,13 +734,31 @@ void write_user(size_t n)
 
 void output()
 {
-	write_tecplot(iter);
+	if(!iter%100)
+		write_tecplot(iter);
+	
 	write_user(iter);
 }
 
 bool check_convergence()
 {
-	return iter > MAX_ITER;
+	double drho_max = 0.0;
+	size_t mI=0, mJ=0;
+	for(size_t j = JMIN+1; j <= JMAX-1; ++j)
+		for(size_t i = IMIN+1; i <= IMAX-1; ++i)
+		{
+			double loc_drho = abs(dU1dt_av(i, j)) * dt;
+			if(loc_drho > drho_max)
+			{
+				drho_max = loc_drho;
+				mI = i;
+				mJ = j;
+			}
+		}
+
+	cout << "\tMAX(drho)="<< drho_max << "Kg/m^3, at(" << mI << ", " << mJ << ")" << endl;
+
+	return drho_max < 1e-8 || iter > MAX_ITER;
 }
 
 // Explicit Time-Marching
@@ -751,6 +781,27 @@ void solve()
 		output();
 		converged = check_convergence();
 	}
+	cout << "Converged!" << endl;
+	write_tecplot(iter);
+}
+
+void check_mdot()
+{
+	double in = 0.0, out = 0.0;
+
+	in += rho(IMIN, JMIN) * u(IMIN,JMIN) * dy/2;
+	out += rho(IMAX, JMIN) * u(IMAX,JMIN) * dy/2;
+	for(size_t j = JMIN+1; j <= JMAX-1; ++j)
+	{
+		in += rho(IMIN, j) * u(IMIN, j) * dy;
+		out += rho(IMAX, j) * u(IMAX, j) * dy;
+	}
+	in += rho(IMAX, JMAX) * u(IMIN, JMAX) * dy/2;
+	out += rho(IMAX, JMAX) * u(IMAX, JMAX) * dy/2;
+
+	cout << "mdot at inlet: " << in << " Kg/(m*s)" << endl;
+	cout << "mdot at outlet: " << out << " Kg/(m*s)" << endl;
+	cout << "Relative error: " << abs((out - in) / in) * 100 << "%" << endl;
 }
 
 int main(int argc, char *argv[])
@@ -758,5 +809,6 @@ int main(int argc, char *argv[])
 	init();
 	output();
 	solve();
+	check_mdot();
 	return 0;
 }
