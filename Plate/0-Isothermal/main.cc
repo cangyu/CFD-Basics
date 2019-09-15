@@ -796,7 +796,7 @@ void check_mdot()
 		in += rho(IMIN, j) * u(IMIN, j) * dy;
 		out += rho(IMAX, j) * u(IMAX, j) * dy;
 	}
-	in += rho(IMAX, JMAX) * u(IMIN, JMAX) * dy/2;
+	in += rho(IMIN, JMAX) * u(IMIN, JMAX) * dy/2;
 	out += rho(IMAX, JMAX) * u(IMAX, JMAX) * dy/2;
 
 	cout << "mdot at inlet: " << in << " Kg/(m*s)" << endl;
