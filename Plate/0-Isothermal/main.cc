@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <string>
 
 using namespace std;
 
@@ -17,7 +18,7 @@ private:
 
 public:
 	Array2D(size_t nx, size_t ny, double val = 0.0) :
-	    m_data(nx * ny, val)
+		m_data(nx * ny, val)
 	{
 		m_Nx = nx;
 		m_Ny = ny;
@@ -58,7 +59,7 @@ const double Ma = 4.0;
 const double R = 287.0; // J/(Kg*K)
 const double G0 = 1.4;
 const double Cv = R / (G0 - 1); // J/(Kg*K)
-const double Cp = G0 * Cv;		// J/(Kg*K)
+const double Cp = G0 * Cv; // J/(Kg*K)
 
 // Grid params
 const size_t IMIN = 1, IMAX = 70;
@@ -226,7 +227,7 @@ void init()
 		}
 
 	/********************************** B.C. **********************************/
-    Isothermal_BC(rho, u, v, p, T, e);
+	Isothermal_BC(rho, u, v, p, T, e);
 
 	/************************ Conservative Variables **************************/
 	for (size_t j = JMIN; j <= JMAX; ++j)
@@ -381,7 +382,7 @@ void MacCormack()
 		}
 
 	/******************************* Prediction *******************************/
-    // Conservative values at inner
+	// Conservative values at inner
 	Array2D U1_bar(IMAX, JMAX, 0.0);
 	Array2D U2_bar(IMAX, JMAX, 0.0);
 	Array2D U3_bar(IMAX, JMAX, 0.0);
@@ -402,8 +403,8 @@ void MacCormack()
 	Array2D T_bar(IMAX, JMAX, Tw);
 	Array2D e_bar(IMAX, JMAX, 0.0);
 
-    // Primitive values at inner
-    for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+	// Primitive values at inner
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			rho_bar(i, j) = U1_bar(i, j);
@@ -416,9 +417,9 @@ void MacCormack()
 		}
 
 	// Primitive values at boundary
-    Isothermal_BC(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
+	Isothermal_BC(rho_bar, u_bar, v_bar, p_bar, T_bar, e_bar);
 
-    // Conservative values at boundary
+	// Conservative values at boundary
 	for (size_t j = JMIN; j <= JMAX; ++j)
 		for (size_t i = IMIN; i <= IMAX; ++i)
 			if (at_boundary(i, j))
@@ -618,7 +619,7 @@ void MacCormack()
 		}
 
 	// Primitive values at boundary
-    Isothermal_BC(rho, u, v, p, T, e);
+	Isothermal_BC(rho, u, v, p, T, e);
 
 	// Conservative values at boundary
 	for (size_t j = JMIN; j <= JMAX; ++j)
