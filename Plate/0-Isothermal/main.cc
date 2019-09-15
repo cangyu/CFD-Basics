@@ -734,7 +734,7 @@ void write_user(size_t n)
 
 void output()
 {
-	if(!iter%100)
+	if(!(iter%100))
 		write_tecplot(iter);
 	
 	write_user(iter);
