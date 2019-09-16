@@ -137,3 +137,40 @@ It seems unstable in the begining, may be improved if under-relaxation is used w
 
 ## Plate (Chapter9)
 Supersonic flow over a plate.  
+2 different thermal B.C. are examined.
+
+### (0) Isothermal B.C.
+Wall temperature is fixed.
+MacCormack scheme is adopted.
+The back-and-forth alternation on derivatives aims at obtaining 2nd-order accuracy, which is similiar to staggered grid.  
+
+Flowfiled at Steady-State:
+
+|<div align=center><img src="Plate/0-Isothermal/fig/U.png"/></div>|<div align=center><img src="Plate/0-Isothermal/fig/V.png"/></div>|
+|:-:|:-:|
+|<div align=center><img src="Plate/0-Isothermal/fig/p.png"/></div>|<div align=center><img src="Plate/0-Isothermal/fig/T.png"/></div>|
+
+Pressure at bottom:
+
+<div align=center><img src="Plate/0-Isothermal/fig/p_bottom.png"/></div>
+
+Values at outlet:
+
+<div align=center><img src="Plate/0-Isothermal/fig/outlet.png"/></div>
+
+Usage:
+> * Compile: `g++ main.cc -std=c++14 -o Plate`
+> * Execute: `./Plate`
+> * View: `Tecplot` or `ParaView` or `EnSight`
+> * Animate: `python3 animate.py`
+
+Pay attention to values at ___boundary___, remember to update them!
+
+### (1) Adiabatic B.C.
+Wall temperature gradient is set to 0.
+
+Usage:
+> * Compile: `g++ main.cc -std=c++14 -o Plate`
+> * Execute: `./Plate`
+> * View: `Tecplot` or `ParaView` or `EnSight`
+> * Animate: `python3 animate.py`
