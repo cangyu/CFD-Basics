@@ -140,8 +140,8 @@ Supersonic flow over a plate.
 2 different thermal B.C. are examined.
 
 ### (0) Isothermal B.C.
-Wall temperature is fixed.
-MacCormack scheme is adopted.
+Wall temperature is fixed.  
+MacCormack scheme is adopted.  
 The back-and-forth alternation on derivatives aims at obtaining 2nd-order accuracy, which is similiar to staggered grid.  
 
 Flowfiled at Steady-State:
@@ -167,7 +167,7 @@ Usage:
 Pay attention to values at ___boundary___, remember to update them!
 
 ### (1) Adiabatic B.C.
-Wall temperature gradient is set to 0.
+Wall temperature gradient is set to 0.  
 
 Usage:
 > * Compile: `g++ main.cc -std=c++14 -o Plate`
