@@ -142,7 +142,7 @@ Supersonic flow over a plate.
 ### (0) Isothermal B.C.
 Wall temperature is fixed.  
 MacCormack scheme is adopted.  
-The back-and-forth alternation on derivatives aims at obtaining 2nd-order accuracy, which is similiar to staggered grid.  
+The back-and-forth alternation on derivatives aims at obtaining 2nd-order accuracy.  
 
 Flowfiled at Steady-State:
 
@@ -158,8 +158,11 @@ Values at outlet:
 
 <div align=center><img src="Plate/0-Isothermal/fig/outlet.png"/></div>
 
+Standard TECPLOT data file in ASCII format will be produced every 100 steps.  
+An aditional file `history.txt` will be written for animation.
+
 Usage:
-> * Compile: `g++ main.cc -std=c++14 -o Plate`
+> * Compile: `g++ main.cc -std=c++14 -o Plate -O3`
 > * Execute: `./Plate`
 > * View: `Tecplot` or `ParaView` or `EnSight`
 > * Animate: `python3 animate.py`
@@ -167,10 +170,28 @@ Usage:
 Pay attention to values at ___boundary___, remember to update them!
 
 ### (1) Adiabatic B.C.
-Wall temperature gradient is set to 0.  
+Similar to previous, only wall temperature gradient is set to 0.  
+This is achieved by simply setting `T(i, JMIN) = T(i, JMIN+1)` inside program.  
+
+Flowfiled at Steady-State:
+
+|<div align=center><img src="Plate/1-Adiabatic/fig/U.png"/></div>|<div align=center><img src="Plate/1-Adiabatic/fig/V.png"/></div>|
+|:-:|:-:|
+|<div align=center><img src="Plate/1-Adiabatic/fig/p.png"/></div>|<div align=center><img src="Plate/1-Adiabatic/fig/T.png"/></div>|
+
+Pressure at bottom:
+
+<div align=center><img src="Plate/1-Adiabatic/fig/p_bottom.png"/></div>
+
+Values at outlet:
+
+<div align=center><img src="Plate/1-Adiabatic/fig/outlet.png"/></div>
+
+Standard TECPLOT data file in ASCII format will be produced every 100 steps.  
+An aditional file `history.txt` will be written for animation.  
 
 Usage:
-> * Compile: `g++ main.cc -std=c++14 -o Plate`
+> * Compile: `g++ main.cc -std=c++14 -o Plate -O3`
 > * Execute: `./Plate`
 > * View: `Tecplot` or `ParaView` or `EnSight`
 > * Animate: `python3 animate.py`
