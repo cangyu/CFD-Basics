@@ -77,7 +77,7 @@ double dt = 1e-5;
 double t = 0.0;
 
 size_t iter = 0;
-const size_t MAX_ITER = 5000;
+const size_t MAX_ITER = 10000;
 
 const double u_inf = Ma * a;
 const double v_inf = 0.0;
@@ -166,7 +166,7 @@ inline double Sutherland(double T)
 
 double TimeStep()
 {
-	static const double CFL = 0.2;
+	static const double CFL = 0.5;
 	static const double nu_factor = max(4.0 / 3, G0 / Pr);
 
 	double ret = numeric_limits<double>::max();
@@ -222,7 +222,7 @@ void Adiabatic_BC(Array2D &rho0, Array2D &u0, Array2D &v0, Array2D &p0, Array2D 
 		u0(i, JMIN) = 0.0;
 		v0(i, JMIN) = 0.0;
 		p0(i, JMIN) = 2 * p0(i, JMIN + 1) - p0(i, JMIN + 2);
-		T0(i, JMIN) = 2 * T0(i, JMIN + 1) - T0(i, JMIN + 2);
+		T0(i, JMIN) = T0(i, JMIN + 1); // !!!
 	}
 
 	// Outlet
