@@ -7,6 +7,7 @@
 #include <cassert>
 #include <limits>
 #include <string>
+#include <stdexcept>
 
 using namespace std;
 
@@ -715,10 +716,12 @@ void write_user(size_t n)
 		if (!fout)
 			throw runtime_error("Failed to open history file.");
 
-		for (int i = 0; i < IMAX; ++i)
+		fout << u_inf << "\t" << v_inf << "\t" << p_inf << "\t" << T_inf << endl;
+
+		for (size_t i = 0; i < IMAX; ++i)
 			fout << setw(WIDTH) << setprecision(DIGITS) << x[i];
 		fout << endl;
-		for (int j = 0; j < JMAX; ++j)
+		for (size_t j = 0; j < JMAX; ++j)
 			fout << setw(WIDTH) << setprecision(DIGITS) << y[j];
 		fout << endl;
 	}
@@ -729,26 +732,56 @@ void write_user(size_t n)
 			throw runtime_error("Failed to open history file.");
 	}
 
+	// Pressure at plate surface
+	for (size_t i = IMIN; i <= IMAX; ++i)
+		fout << setw(WIDTH) << setprecision(DIGITS) << p(i, 1);
+	fout << endl;
+
+	// Pressure at outlet
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		fout << setw(WIDTH) << setprecision(DIGITS) << p(IMAX, j);
+	fout << endl;
+
+	// Temperature at outlet
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		fout << setw(WIDTH) << setprecision(DIGITS) << T(IMAX, j);
+	fout << endl;
+
+	// Stream-wise velocity at outlet
+	for (size_t j = JMIN; j <= JMAX; ++j)
+		fout << setw(WIDTH) << setprecision(DIGITS) << u(IMAX, j);
+	fout << endl;
+
+	// Mach number at outlet
+	for (size_t j = JMIN; j <= JMAX; ++j)
+	{
+		const double loc_C = sqrt(G0 * R * T(IMAX, j));
+		const double loc_V = sqrt(pow(u(IMAX, j), 2) + pow(v(IMAX, j), 2));
+		const double loc_Ma = loc_V / loc_C;
+		fout << setw(WIDTH) << setprecision(DIGITS) << loc_Ma;
+	}
+	fout << endl;
+
 	fout.close();
 }
 
 void output()
 {
-	if(!(iter%100))
+	if (!(iter % 100))
 		write_tecplot(iter);
-	
+
 	write_user(iter);
 }
 
 bool check_convergence()
 {
 	double drho_max = 0.0;
-	size_t mI=0, mJ=0;
-	for(size_t j = JMIN+1; j <= JMAX-1; ++j)
-		for(size_t i = IMIN+1; i <= IMAX-1; ++i)
+	size_t mI = 0, mJ = 0;
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
+		for (size_t i = IMIN + 1; i <= IMAX - 1; ++i)
 		{
 			double loc_drho = abs(dU1dt_av(i, j)) * dt;
-			if(loc_drho > drho_max)
+			if (loc_drho > drho_max)
 			{
 				drho_max = loc_drho;
 				mI = i;
@@ -756,7 +789,7 @@ bool check_convergence()
 			}
 		}
 
-	cout << "\tMAX(drho)="<< drho_max << "Kg/m^3, at(" << mI << ", " << mJ << ")" << endl;
+	cout << "\tMAX(drho)=" << drho_max << "Kg/m^3, at(" << mI << ", " << mJ << ")" << endl;
 
 	return drho_max < 1e-8 || iter > MAX_ITER;
 }
@@ -789,15 +822,15 @@ void check_mdot()
 {
 	double in = 0.0, out = 0.0;
 
-	in += rho(IMIN, JMIN) * u(IMIN,JMIN) * dy/2;
-	out += rho(IMAX, JMIN) * u(IMAX,JMIN) * dy/2;
-	for(size_t j = JMIN+1; j <= JMAX-1; ++j)
+	in += rho(IMIN, JMIN) * u(IMIN, JMIN) * dy / 2;
+	out += rho(IMAX, JMIN) * u(IMAX, JMIN) * dy / 2;
+	for (size_t j = JMIN + 1; j <= JMAX - 1; ++j)
 	{
 		in += rho(IMIN, j) * u(IMIN, j) * dy;
 		out += rho(IMAX, j) * u(IMAX, j) * dy;
 	}
-	in += rho(IMIN, JMAX) * u(IMIN, JMAX) * dy/2;
-	out += rho(IMAX, JMAX) * u(IMAX, JMAX) * dy/2;
+	in += rho(IMIN, JMAX) * u(IMIN, JMAX) * dy / 2;
+	out += rho(IMAX, JMAX) * u(IMAX, JMAX) * dy / 2;
 
 	cout << "mdot at inlet: " << in << " Kg/(m*s)" << endl;
 	cout << "mdot at outlet: " << out << " Kg/(m*s)" << endl;
